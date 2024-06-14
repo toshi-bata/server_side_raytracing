@@ -21,6 +21,8 @@
 #include "HCLuminateBridge.h"
 #include <windows.h>
 
+using namespace HC_luminate_bridge;
+
 #ifdef _MSC_VER
 #ifndef strcasecmp
 #define strcasecmp(a,b) _stricmp ((a),(b))
@@ -145,6 +147,31 @@ sendResponseFloatArr(struct MHD_Connection *connection, std::vector<float> &floa
 	return ret;
 }
 
+template <typename List>
+void split(const std::string& s, const std::string& delim, List& result)
+{
+    result.clear();
+
+    using string = std::string;
+    string::size_type pos = 0;
+
+    while (pos != string::npos)
+    {
+        string::size_type p = s.find(delim, pos);
+
+        if (p == string::npos)
+        {
+            result.push_back(s.substr(pos));
+            break;
+        }
+        else {
+            result.push_back(s.substr(pos, p - pos));
+        }
+
+        pos = p + delim.size();
+    }
+}
+
 bool paramStrToStr(const char *key, std::string &sVal)
 {
 	sVal = s_mParams[std::string(key)];
@@ -171,6 +198,28 @@ bool paramStrToDbl(const char *key, double &dVal)
 	dVal = std::atof(sVal.c_str());
 
 	return true;
+}
+
+bool paramStrToXYZ(const char* key, double*& dXYZ)
+{
+    std::string sVal = s_mParams[std::string(key)];
+    if (sVal.empty()) return false;
+
+    std::vector<std::string> strArr;
+    split(sVal.c_str(), ",", strArr);
+
+    int entCnt = strArr.size();
+
+    if (3 != entCnt)
+        return false;
+
+    dXYZ = new double[entCnt];
+
+    dXYZ[0] = std::atof(strArr[0].c_str());
+    dXYZ[1] = std::atof(strArr[1].c_str());
+    dXYZ[2] = std::atof(strArr[2].c_str());
+
+    return true;
 }
 
 bool paramStrToChr(const char *key, char &cha)
@@ -493,6 +542,18 @@ answer_to_connection(void* cls,
         }
         else if (0 == strcmp(url, "/Raytracing"))
         {
+            double *target, *up, *position;
+            if (!paramStrToXYZ("target", target)) return MHD_NO;
+            if (!paramStrToXYZ("up", up)) return MHD_NO;
+            if (!paramStrToXYZ("position", position)) return MHD_NO;
+
+            int projection;
+            if (!paramStrToInt("projection", projection));
+
+            double width, height;
+            if (!paramStrToDbl("width", width));
+            if (!paramStrToDbl("height", height));
+
             if (NULL != pHCLuminateBridge)
             {
                 pHCLuminateBridge->shutdown();
@@ -500,15 +561,38 @@ answer_to_connection(void* cls,
             }
 
             pHCLuminateBridge = new HCLuminateBridge();
-            if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, 800, 600))
+
+            CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, width, height);
+
+            if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, 800, 600, cameraInfo))
             {
+                pHCLuminateBridge->syncScene();
                 pHCLuminateBridge->draw();
-                pHCLuminateBridge->saveImg();
+                //pHCLuminateBridge->saveImg();
             }
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/Draw"))
+        {
+            pHCLuminateBridge->draw();
+
+            FrameStatistics statistics = pHCLuminateBridge->getFrameStatistics();
+
+            std::vector<float> floatArr;
+            floatArr.push_back(statistics.renderingIsDone);
+            floatArr.push_back(statistics.renderingProgress);
+            floatArr.push_back(statistics.remainingTimeMilliseconds);
+
+            if (90 <= statistics.renderingProgress * 100)
+                pHCLuminateBridge->saveImg();
+
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
+
+            return sendResponseFloatArr(connection, floatArr);
         }
     }
 

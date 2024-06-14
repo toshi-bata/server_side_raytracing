@@ -12,13 +12,14 @@ class Main {
             "10.0": "cm",
             "1000.0": "m"
         };
+        this._timerId;
     }
 
-    start (port, reverseProxy) {
+    start (port, viewerMode, modelName, reverseProxy) {
         this._port = port;
         this._reverseProxy = reverseProxy;
         this._requestServerProcess();
-        this._createViewer();
+        this._createViewer(viewerMode, modelName);
         this._initEvents();
     }
 
@@ -33,36 +34,25 @@ class Main {
 
         this._serverCaller = new ServerCaller(psServerURL, this._sessionId);
 
+        this._timerId = null;
     }
 
-    _createViewer() {
-        let endpoint = "ws://" + window.location.hostname + ":11182";
-        if (this._reverseProxy) {
-            if ("http:" == window.location.protocol) {
-                endpoint = "ws://" + window.location.hostname + "/wsproxy/11182";
-            }
-            else {
-                endpoint = "wss://" + window.location.hostname + "/wsproxy/11182";
-            }
-        }
-        this._viewer = new Communicator.WebViewer({
-            containerId: "container",
-            model: "_empty",
-            endpointUri: endpoint,
-            rendererType: Communicator.RendererType.Client
-        });
+    _createViewer(viewerMode, modelName) {
+        createViewer(viewerMode, modelName, "container", this._reverseProxy).then((hwv) => {
+            this._viewer = hwv;
 
-        this._viewer.setCallbacks({
-            sceneReady: () => {
-                this._viewer.view.setBackgroundColor(new Communicator.Color(255, 255, 255), new Communicator.Color(230, 204, 179));
-            },
-            timeout: () => {
-                this._serverCaller.CallServerPost("Clear");
-                console.log("Timeout");
-            }
-        });
+            this._viewer.setCallbacks({
+                sceneReady: () => {
+                    this._viewer.view.setBackgroundColor(new Communicator.Color(255, 255, 255), new Communicator.Color(230, 204, 179));
+                },
+                timeout: () => {
+                    this._serverCaller.CallServerPost("Clear");
+                    console.log("Timeout");
+                }
+            });
 
-        this._viewer.start();
+            this._viewer.start();
+        });
     }
 
     _initEvents() {
@@ -144,12 +134,19 @@ class Main {
                     $('#UploadDlg').dialog('open');
                 } break;
                 case "Raytracing": {
-                    const params = {};
-                    this._serverCaller.CallServerPost(command, params).then(() => {
-
-                    });
+                    this._invokeRaytracing(command);
                 } break;
                 default: {} break;
+            }
+        });
+
+        // Toggle button common
+        $(".toggleBtn").on("click", (e) => {
+            let isOn = $(e.currentTarget).data("on");
+            if(isOn) {
+                $(e.currentTarget).data("on", false).css("background-color", "gainsboro");
+            } else {
+                $(e.currentTarget).data("on", true).css("background-color", "khaki");
             }
         });
     }
@@ -183,5 +180,46 @@ class Main {
                 });
             });
         });
+    }
+
+    _invokeRaytracing(command) {   
+        if (null == this._timerId) {     
+            const camera = this._viewer.view.getCamera();
+            const target = camera.getTarget();
+            const up = camera.getUp();
+            const position = camera.getPosition();
+            const projection = camera.getProjection();
+            const width = camera.getWidth();
+            const height = camera.getHeight();
+            const params = {
+                target: [target.x, target.y, target.z],
+                up: [up.x, up.y, up.z],
+                position: [position.x, position.y, position.z],
+                projection: projection,
+                width: width,
+                height: height
+            };
+            this._serverCaller.CallServerPost(command, params).then(() => {
+                this._timerId = setInterval(() => {
+                    this._serverCaller.CallServerPost("Draw", "{}", "FLOAT").then((arr) => {
+                        if (arr.length) {
+                            const renderingIsDone = arr[0];
+                            const renderingProgress = arr[1] * 100;
+                            const remainingTimeMilliseconds = arr[2];
+                            $("#progressInfo").html("Progress: " + Math.round(renderingProgress));
+
+                            if (90 <= renderingProgress) {
+                                clearInterval(this._timerId);
+                            }
+                        }
+                    });
+                }, 200);
+            });
+        }
+        else {
+            clearInterval(this._timerId);
+            this._timerId = null;
+            $("#progressInfo").html("");
+        }
     }
 }

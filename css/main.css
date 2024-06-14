@@ -15,15 +15,10 @@
     border: solid 1px #000000;
     background-color: gainsboro;
 }
-#dataInfo {
+#progressInfo {
     position: absolute;
     bottom: 20px;
     left: 20px;
-}
-#entityInfo {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
 }
 table {
     width: 200px;

@@ -1,119 +1,239 @@
-#pragma once
+#ifndef LUMINATEBRIDGE_COMMUNICATORLUMINATEBRIDGE_H
+#define LUMINATEBRIDGE_COMMUNICATORLUMINATEBRIDGE_H
 
 #include <string>
+#include <memory>
 
 #include <RED.h>
 #include <REDObject.h>
+#include <REDVector3.h>
 #include <REDIWindow.h>
 
-/**
- * Structure storing the frame statistics.
- */
-struct FrameStatistics {
-	bool renderingIsDone;
-	float renderingProgress;
-	float remainingTimeMilliseconds;
-	int numberOfPasses;
-	int currentPass;
-};
+#include "ConversionTools.h"
+//#include <hoops_luminate_bridge/AxisTriad.h>
+//#include "LightingEnvironment.h"
 
-class HCLuminateBridge
-{
-public:
-	HCLuminateBridge();
-	~HCLuminateBridge();
+namespace HC_luminate_bridge {
 
-public:
 	/**
-	* Request to draw a new frame.
-	* This method must be called continuously and will check by itself
-	* if cameras must be sync and if a new render must be processed.
-	* @return True if success, otherwise False.
+	* Enumeration of different lighting model supported by the bridge.
 	*/
-	bool draw();
+	enum class LightingModel { No, Default, PhysicalSunSky, EnvironmentMap };
 
 	/**
-	 * Shutdown completely Luminate.
+	 * Structure storing generic information about a camera.
+	 */
+	struct CameraInfo {
+		ProjectionMode projectionMode;
+		float field_width;
+		float field_height;
+		RED::Vector3 eyePosition;
+		RED::Vector3 right;
+		RED::Vector3 top;
+		RED::Vector3 sight;
+		RED::Vector3 target;
+	};
+
+	/**
+	 * Structure storing the frame statistics.
+	 */
+	struct FrameStatistics {
+		bool renderingIsDone;
+		float renderingProgress;
+		float remainingTimeMilliseconds;
+		int numberOfPasses;
+		int currentPass;
+	};
+
+	/**
+	 * Structure storing the information about selected segment.
+	 */
+	struct SelectedSegmentInfo {
+		RED::Color m_diffuseColor;
+
+		SelectedSegmentInfo(RED::Color const& a_diffuseColor): m_diffuseColor(a_diffuseColor) {};
+		virtual ~SelectedSegmentInfo() = 0;
+	};
+
+	using SelectedSegmentInfoPtr = std::shared_ptr<SelectedSegmentInfo>;
+
+	/**
+	 * Base virtual class of helpers making usage of the bridge really easy.
+	 * It is implemented by LuminateBridge3DF and LuminateBridgeHPS with 3DF/HPS
+	 * specificities.
+	 */
+	class HCLuminateBridge {
+		// Instance Fields:
+		// ----------------
+
+	protected:
+		// Window.
+		RED::Object* m_window;
+		int m_windowWidth;
+		int m_windowHeight;
+		RED::Object* m_auxvrl;
+		
+		// Camera.
+		RED::Object* m_auxcamera;
+
+		// Scene.
+		LuminateSceneInfoPtr m_conversionDataPtr;
+
+		// Render.
+		bool m_frameIsComplete;
+		bool m_newFrameIsRequired;
+		FrameStatistics m_lastFrameStatistics;
+		RED::FRAME_TRACING_FEEDBACK m_frameTracingMode;
+
+		// Lighting environment.
+		// Only one of the two can be active at same time.
+		LightingModel m_lightingModel;
+		//DefaultLightingModel m_defaultLightingModel;
+		//PhysicalSunSkyLightingModel m_sunSkyLightingModel;
+		//EnvironmentMapLightingModel m_environmentMapLightingModel;
+
+		// Static Fields:
+		// --------------
+	public:
+		static const RED::Matrix s_leftHandedToRightHandedMatrix;
+
+		// Constructors:
+		// -------------
+	public:
+		HCLuminateBridge();
+		~HCLuminateBridge();
+
+		// Methods:
+		// --------
+
+	public:
+		/**
+		* Request to draw a new frame.
+		* This method must be called continuously and will check by itself
+		* if cameras must be sync and if a new render must be processed.
+		* @return True if success, otherwise False.
+		*/
+		bool draw();
+
+		/**
+		 * Synchronize Luminate scene with the current 3DF/HPS scene.
+		 * The previous scene will be destroyed.
+		 * @return True if success, otherwise False.
+		 */
+		bool syncScene();
+
+		/**
+		 * Shutdown completely Luminate.
+		 * This will destroy and free everything.
+		 * @return True if success, otherwise False.
+		 */
+		bool shutdown();
+
+		/**
+		 * Resize the Luminate window.
+		 * @param[in] a_windowWidth New width to set.
+		 * @param[in] a_windowHeight New height to set.
+		 * @return True if success, otherwise False.
+		 */
+		bool resize(int a_windowWidth, int a_windowHeight);
+
+		bool initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight, CameraInfo a_cameraInfo);
+
+		/**
+		 * Get rendering progress.
+		 * @return rendering progress in percent.
+		 */
+		FrameStatistics getFrameStatistics();
+
+		CameraInfo creteCameraInfo(double* a_target, double* a_up, double* a_position, int a_projection, double a_width, double a_height);
+		bool saveImg();
+
+	private:
+		static RED_RC createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera);
+
+		/**
+		 * Synchronize the Luminate camera with the 3DF/HPS one.
+		 * @return RED_OK if success, otherwise error code.
+		 */
+		RED_RC syncLuminateCamera(CameraInfo a_cameraInfo);
+	};
+
+	RED_RC setLicense(char const* a_license, bool& a_outLicenseIsActive);
+	RED_RC setSoftTracerMode(int a_mode);
+	RED_RC createRedWindow(void* a_osHandler,
+		int a_width,
+		int a_height,
+#ifdef _LIN32
+		Display* a_display,
+		int a_screen,
+		Visual* a_visual,
+#endif
+		RED::Object*& a_outWindow);
+
+	/**
+	 * Stops window tracing and shutdown completely Luminate.
 	 * This will destroy and free everything.
 	 * @return True if success, otherwise False.
 	 */
-	bool shutdown();
+	RED_RC shutdownLuminate(RED::Object* a_window);
+
+	/**
+	 * Create a new camera attached to a window.
+	 * @param[in] a_window Window on which to attach the new camera.
+	 * @param[in] a_windowWidth Current window width.
+	 * @param[in] a_windowHeight Current window height.
+	 * @param[out] a_outCamera Output camera.
+	 * @return RED_OK if success, otherwise error code.
+	 */
+	RED_RC createRedCamera(RED::Object* a_window, int a_windowWidth, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera);
 
 	/**
 	 * Resize the Luminate window.
 	 * @param[in] a_windowWidth New width to set.
 	 * @param[in] a_windowHeight New height to set.
-	 * @return True if success, otherwise False.
+	 * @return RED_OK if success, otherwise error code.
 	 */
-	bool resize(int a_windowWidth, int a_windowHeight);
+	RED_RC resizeWindow(RED::Object* a_window, int a_newWidth, int a_newHeight);
 
-	bool initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight);
-	bool saveImg();
+	/**
+	 * Add a scene to a camera.
+	 * @param[in] a_camera Camera which will receive the scene root.
+	 * @param[in] a_sceneInfo Scene description to add.
+	 * @return RED_OK if success, otherwise error code.
+	 */
+	RED_RC addSceneToCamera(RED::Object* a_camera, LuminateSceneInfo const& a_sceneInfo);
 
-protected:
-	// Window.
-	RED::Object* m_window;
-	int m_windowWidth;
-	int m_windowHeight;
+	/**
+ * Synchornize Luminate camera with a generic camera information.
+	 * @param[in] a_camera Camera to synchronize.
+	 * @param[in] a_sceneHandedness Scene handedness.
+	 * @param[in] a_windowWidth Parent window width.
+	 * @param[in] a_windowHeight Parent window height.
+	 * @param[in] a_cameraInfo Camera generic description.
+	 * @return RED_OK if success, otherwise error code.
+	 */
+	RED_RC syncCameras(RED::Object* a_camera,
+		Handedness a_sceneHandedness,
+		int a_windowWidth,
+		int a_windowHeight,
+		CameraInfo const& a_cameraInfo);
 
-	// Offscreen window
-	RED::Object* m_auxvrl;
-	RED::Object* m_auxcamera;
+	/**
+	 * Check and perform tracing call in a window.
+	 * @param[in] a_window Window where to trace.
+	 * @param[in] a_tracingMode Tracing methode, could be pathtracing or raytracing.
+	 * @param[io] a_ioFrameIsComplete Input/Output flag indicating if current image has been fully traced.
+	 * @param[io] a_ioNewFrameIsRequired Input/Output flag indicating if a new image should be started.
+	 * @return RED_OK if success, otherwise error code.
+	 */
+	RED_RC checkDrawTracing(RED::Object* a_window,
+		RED::FRAME_TRACING_FEEDBACK a_tracingMode,
+		bool& a_ioFrameIsComplete,
+		bool& a_ioNewFrameIsRequired);
 
-	// Render
-	bool m_frameIsComplete;
-	bool m_newFrameIsRequired;
-	FrameStatistics m_lastFrameStatistics;
-	RED::FRAME_TRACING_FEEDBACK m_frameTracingMode;
+	RED_RC checkDrawHardware(RED::Object* a_window);
 
-private:
-	static RED_RC createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera);
-	RED_RC syncLuminateCamera();
+	RED_RC checkFrameStatistics(RED::Object* a_window, FrameStatistics* a_stats, bool& a_ioFrameIsComplete);
+} // HC_luminate_bridge
 
-};
-
-RED_RC setLicense(char const* a_license, bool& a_outLicenseIsActive);
-RED_RC setSoftTracerMode(int a_mode);
-RED_RC createRedWindow(void* a_osHandler,
-	int a_width,
-	int a_height,
-#ifdef _LIN32
-	Display* a_display,
-	int a_screen,
-	Visual* a_visual,
 #endif
-	RED::Object*& a_outWindow);
-
-/**
- * Stops window tracing and shutdown completely Luminate.
- * This will destroy and free everything.
- * @return True if success, otherwise False.
- */
-RED_RC shutdownLuminate(RED::Object* a_window);
-
-/**
- * Create a new camera attached to a window.
- * @param[in] a_window Window on which to attach the new camera.
- * @param[in] a_windowWidth Current window width.
- * @param[in] a_windowHeight Current window height.
- * @param[out] a_outCamera Output camera.
- * @return RED_OK if success, otherwise error code.
- */
-RED_RC createRedCamera(RED::Object* a_window, int a_windowWidth, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera);
-
-/**
- * Resize the Luminate window.
- * @param[in] a_windowWidth New width to set.
- * @param[in] a_windowHeight New height to set.
- * @return RED_OK if success, otherwise error code.
- */
-RED_RC resizeWindow(RED::Object* a_window, int a_newWidth, int a_newHeight);
-
-RED_RC checkDrawTracing(RED::Object* a_window,
-	RED::FRAME_TRACING_FEEDBACK a_tracingMode,
-	bool& a_ioFrameIsComplete,
-	bool& a_ioNewFrameIsRequired);
-
-RED_RC checkDrawHardware(RED::Object* a_window);
-
-RED_RC checkFrameStatistics(RED::Object* a_window, FrameStatistics* a_stats, bool& a_ioFrameIsComplete);
