@@ -210,6 +210,7 @@ class Main {
 
                             if (90 <= renderingProgress) {
                                 clearInterval(this._timerId);
+                                $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
                             }
                         }
                     });
