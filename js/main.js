@@ -44,6 +44,9 @@ class Main {
             this._viewer.setCallbacks({
                 sceneReady: () => {
                     this._viewer.view.setBackgroundColor(new Communicator.Color(255, 255, 255), new Communicator.Color(230, 204, 179));
+                    this._viewer.view.axisTriad.enable(true);
+                    this._viewer.view.setProjectionMode(Communicator.Projection.Perspective);
+                    this._viewer.view.setViewOrientation(Communicator.ViewOrientation.Iso);
                 },
                 timeout: () => {
                     this._serverCaller.CallServerPost("Clear");
@@ -208,7 +211,7 @@ class Main {
                             const remainingTimeMilliseconds = arr[2];
                             $("#progressInfo").html("Progress: " + Math.round(renderingProgress));
 
-                            if (90 <= renderingProgress) {
+                            if (20 <= renderingProgress) {
                                 clearInterval(this._timerId);
                                 $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
                             }

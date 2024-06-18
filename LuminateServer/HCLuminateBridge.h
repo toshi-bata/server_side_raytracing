@@ -12,6 +12,7 @@
 #include "ConversionTools.h"
 //#include <hoops_luminate_bridge/AxisTriad.h>
 //#include "LightingEnvironment.h"
+#include "ExProcess.h"
 
 namespace HC_luminate_bridge {
 
@@ -56,6 +57,38 @@ namespace HC_luminate_bridge {
 	};
 
 	using SelectedSegmentInfoPtr = std::shared_ptr<SelectedSegmentInfo>;
+
+	/**
+	* HPS::UTF8 comparator in order to use it as map key.
+	*/
+	struct HPSUTF8Comparator {
+		bool operator()(char* const& lhs, char* const& rhs) const
+		{
+			char const* lchars = lhs;
+			char const* rchars = rhs;
+			return std::string(lchars) < std::string(rchars);
+		}
+	};
+
+	/**
+	 * Mapping between segment hash and associated Luminate mesh shapes.
+	 */
+	using SegmentMeshShapesMap = std::map<intptr_t, std::vector<RED::Object*>>;
+
+	/**
+	 * Mapping between segment hash and associated Luminate transform shape.
+	 */
+	using SegmentTransformShapeMap = std::map<char*, RED::Object*, HPSUTF8Comparator>;
+
+	/**
+	* LuminateSceneInfo extension with specific HPS informations.
+	*/
+	struct ConversionContextHPS : LuminateSceneInfo {
+		SegmentMeshShapesMap segmentMeshShapesMap;
+		SegmentTransformShapeMap segmentTransformShapeMap;
+	};
+
+	using ConversionContextHPSPtr = std::shared_ptr<ConversionContextHPS>;
 
 	/**
 	 * Base virtual class of helpers making usage of the bridge really easy.
@@ -120,7 +153,7 @@ namespace HC_luminate_bridge {
 		 * The previous scene will be destroyed.
 		 * @return True if success, otherwise False.
 		 */
-		bool syncScene();
+		bool syncScene(std::vector<MeshPropaties>, CameraInfo a_cameraInfo);
 
 		/**
 		 * Shutdown completely Luminate.
@@ -147,7 +180,6 @@ namespace HC_luminate_bridge {
 
 		CameraInfo creteCameraInfo(double* a_target, double* a_up, double* a_position, int a_projection, double a_width, double a_height);
 		bool saveImg();
-
 	private:
 		static RED_RC createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera);
 
@@ -156,6 +188,8 @@ namespace HC_luminate_bridge {
 		 * @return RED_OK if success, otherwise error code.
 		 */
 		RED_RC syncLuminateCamera(CameraInfo a_cameraInfo);
+
+		LuminateSceneInfoPtr convertScene(std::vector <MeshPropaties> aMeshProps);
 	};
 
 	RED_RC setLicense(char const* a_license, bool& a_outLicenseIsActive);
@@ -204,6 +238,13 @@ namespace HC_luminate_bridge {
 	RED_RC addSceneToCamera(RED::Object* a_camera, LuminateSceneInfo const& a_sceneInfo);
 
 	/**
+	 * Destroy a scene and free its resources.
+	 * @param[in] a_sceneInfo Description of scene to remove.
+	 * @return RED_OK if success, otherwise error code.
+	 */
+	RED_RC destroyScene(LuminateSceneInfo const& a_sceneInfo);
+
+	/**
  * Synchornize Luminate camera with a generic camera information.
 	 * @param[in] a_camera Camera to synchronize.
 	 * @param[in] a_sceneHandedness Scene handedness.
@@ -234,6 +275,11 @@ namespace HC_luminate_bridge {
 	RED_RC checkDrawHardware(RED::Object* a_window);
 
 	RED_RC checkFrameStatistics(RED::Object* a_window, FrameStatistics* a_stats, bool& a_ioFrameIsComplete);
+
+	RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextHPS& a_ioConversionContext, MeshPropaties aMeshProps);
+
+	RED::Object* convertHEMeshToREDMeshShape(const RED::State& a_state, A3DMeshData a_meshData);
+
 } // HC_luminate_bridge
 
 #endif

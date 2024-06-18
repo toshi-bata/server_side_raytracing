@@ -129,73 +129,6 @@ namespace HC_luminate_bridge {
 
         RC_TEST(iauxvrl->SetClearColor(RED::Color::WHITE, iresourceManager->GetState()));
 
-        // Create test model
-        {
-            RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
-            RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
-
-            // 2.1.1) Creating an offscreen cube with light and material:
-            // ----------------------------------------------------------
-
-            RED::Object* matr;
-            RC_TEST(iresmgr->CreateMaterial(matr, iresmgr->GetState()));
-            RED::IMaterial* imatr = matr->As< RED::IMaterial >();
-            (imatr->SetupGenericDiffuseMaterial(false, RED::Color::RED, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,
-                &RED::LayerSet::ALL_LAYERS, NULL, resmgr, iresmgr->GetState()));
-
-            RED::Object* auxnode = RED::Factory::CreateInstance(CID_REDTransformShape);
-            if (!auxnode)
-                RC_TEST(RED_ALLOC_FAILURE);
-
-            auxnode->SetID("auxnode");
-
-            RED::ITransformShape* iauxnode = auxnode->As< RED::ITransformShape >();
-
-            RED::Object* auxcube = RED::Factory::CreateInstance(CID_REDMeshShape);
-            if (!auxcube)
-                RC_TEST(RED_FAIL);
-            RED::IShape* isauxcube = auxcube->As< RED::IShape >();
-            RC_TEST(isauxcube->SetMaterial(matr, iresmgr->GetState()));
-            RED::IMeshShape* imauxcube = auxcube->As< RED::IMeshShape >();
-            RC_TEST(imauxcube->Box(RED::Vector3(0.0, 0.0, 0.0), RED::Vector3(100.0, 100.0, 100.0), iresmgr->GetState()));
-            RC_TEST(iauxnode->AddChild(auxcube, RED_SHP_DAG_NO_UPDATE, iresmgr->GetState()));
-
-            RED::Object* auxlight = RED::Factory::CreateInstance(CID_REDLightShape);
-            if (!auxlight)
-                RC_TEST(RED_FAIL);
-            RED::ILightShape* iauxlight = auxlight->As< RED::ILightShape >();
-            float attvalues[RED_LIGHT_ATT_NB_VALUES] = { 1.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
-            RC_TEST(iauxlight->SetPointLight(RED::ATN_NONE, attvalues, RED::Vector3(500.0, 600.0, 800.0),
-                RED::Color::WHITE, RED::Color::WHITE, iresmgr->GetState()));
-
-
-            // 2.1.2) Creating the offscreen camera:
-            // -------------------------------------
-
-            //RED::Object* auxcamera = RED::Factory::CreateInstance(CID_REDViewpoint);
-            //if (!auxcamera)
-            //    RC_TEST(RED_ALLOC_FAILURE);
-
-            RED::IViewpoint* iauxcamera = m_auxcamera->As< RED::IViewpoint >();
-
-            RED::Vector3 eye(250.0, 250.0, 250.0);
-            RED::Vector3 sight, top, right;
-
-            sight = -eye;
-            sight.Normalize();
-            top = RED::Vector3::ZAXIS;
-            right = sight.Cross2(top);
-            top = right.Cross2(sight);
-
-            RC_TEST(iauxcamera->SetEye(eye, iresmgr->GetState()));
-            RC_TEST(iauxcamera->SetViewingAxis(sight, top, right, iresmgr->GetState()));
-            RC_TEST(iauxcamera->SetFrustumPerspective(RED_PI / 6.0, 1.0, iresmgr->GetState()));
-            RC_TEST(iauxcamera->SetNearFar(1.0, 1000.0, iresmgr->GetState()));
-
-            RC_TEST(iauxcamera->AddShape(auxnode, iresmgr->GetState()));
-            RC_TEST(iauxcamera->AddShape(auxlight, iresmgr->GetState()));
-        }
-
         //////////////////////////////////////////
         // Synchronize HC and Luminate cameras for
         // the first time.
@@ -287,7 +220,7 @@ namespace HC_luminate_bridge {
         return rc == RED_OK;
     }
 
-    bool HCLuminateBridge::syncScene()
+    bool HCLuminateBridge::syncScene(std::vector <MeshPropaties> aMeshProps, CameraInfo a_cameraInfo)
     {
         //////////////////////////////////////////
         // Retrieve the resource manager from singleton
@@ -314,35 +247,35 @@ namespace HC_luminate_bridge {
         //////////////////////////////////////////
 
         RED::Object* newCamera = nullptr;
-        RED_RC rc = createCamera(m_window, m_windowWidth, m_windowHeight, 0, newCamera);
+        RED_RC rc = createCamera(m_window, m_windowWidth, m_windowHeight, 1, newCamera);
         if (rc != RED_OK)
             return false;
+
+        std::shared_ptr<LuminateSceneInfo> newSceneInfo = convertScene(aMeshProps);
+        addSceneToCamera(newCamera, *newSceneInfo);
         
-        //std::shared_ptr<LuminateSceneInfo> newSceneInfo = convertScene();
-        //addSceneToCamera(newCamera, *newSceneInfo);
-        /*
         //////////////////////////////////////////
         // Add lighting environment to the scene
         // root.
         //////////////////////////////////////////
 
-        switch (m_lightingModel) {
-        case LightingModel::Default:
-            addDefaultModel(m_window, newSceneInfo->rootTransformShape, m_defaultLightingModel);
-            break;
-        case LightingModel::PhysicalSunSky:
-            addSunSkyModel(m_window, newSceneInfo->rootTransformShape, m_sunSkyLightingModel);
-            break;
-        case LightingModel::EnvironmentMap:
-            addEnvironmentMapModel(m_window, newSceneInfo->rootTransformShape, m_environmentMapLightingModel);
-            break;
-        };
+        //switch (m_lightingModel) {
+        //case LightingModel::Default:
+        //    addDefaultModel(m_window, newSceneInfo->rootTransformShape, m_defaultLightingModel);
+        //    break;
+        //case LightingModel::PhysicalSunSky:
+        //    addSunSkyModel(m_window, newSceneInfo->rootTransformShape, m_sunSkyLightingModel);
+        //    break;
+        //case LightingModel::EnvironmentMap:
+        //    addEnvironmentMapModel(m_window, newSceneInfo->rootTransformShape, m_environmentMapLightingModel);
+        //    break;
+        //};
 
         //////////////////////////////////////////
         // Remove and cleanup previous scene and
         // replace current camera by the new one.
         //////////////////////////////////////////
-
+        
         if (m_conversionDataPtr != nullptr) {
             rc = destroyScene(*m_conversionDataPtr);
             m_conversionDataPtr.reset();
@@ -350,7 +283,7 @@ namespace HC_luminate_bridge {
                 return false;
         }
 
-        rc = RED::Factory::DeleteInstance(m_camera, iresourceManager->GetState());
+        rc = RED::Factory::DeleteInstance(m_auxcamera, iresourceManager->GetState());
         if (rc != RED_OK)
             return false;
 
@@ -361,10 +294,10 @@ namespace HC_luminate_bridge {
         // new scene.
         //////////////////////////////////////////
 
-        m_camera = newCamera;
+        m_auxcamera = newCamera;
         
-        return syncLuminateCamera() == RED_OK;
-        */
+        return syncLuminateCamera(a_cameraInfo) == RED_OK;
+        
         return true;
     }
 
@@ -458,6 +391,151 @@ namespace HC_luminate_bridge {
         RC_TEST(pp.SetToneMapping(RED::TMO_PHOTOGRAPHIC));
 
         return RED_OK;
+    }
+
+    LuminateSceneInfoPtr HCLuminateBridge::convertScene(std::vector <MeshPropaties> aMeshProps)
+    {
+        //////////////////////////////////////////
+        // Get the resource manager singleton.
+        //////////////////////////////////////////
+
+        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+
+        //////////////////////////////////////////
+        // Create conversion root shape
+        //////////////////////////////////////////
+
+        RED::Object* rootTransformShape = RED::Factory::CreateInstance(CID_REDTransformShape);
+        RED::ITransformShape* itransform = rootTransformShape->As<RED::ITransformShape>();
+
+        //////////////////////////////////////////
+        // Manage scene handedness.
+        // Luminate is working with a right-handed coordinate system,
+        // thus if the input scene is left-handed we must apply
+        // a transformation on the conversion root to go right-handed.
+        //////////////////////////////////////////
+
+        //Handedness viewHandedness = getViewHandedness(a_hpsView);
+        Handedness viewHandedness = Handedness::RightHanded;
+
+        if (viewHandedness == Handedness::LeftHanded) {
+            //RC_CHECK(itransform->SetMatrix(&HoopsLuminateBridge::s_leftHandedToRightHandedMatrix, iresourceManager->GetState()));
+        }
+
+        //////////////////////////////////////////
+        // Create the default material definition.
+        //////////////////////////////////////////
+
+        RealisticMaterialInfo defaultMaterialInfo = createDefaultRealisticMaterialInfo();
+
+        //////////////////////////////////////////
+        // Initialize the conversion context which will hold
+        // current conversion data state during conversion.
+        //////////////////////////////////////////
+
+        ConversionContextHPSPtr sceneInfoPtr = std::make_shared<ConversionContextHPS>();
+        sceneInfoPtr->rootTransformShape = rootTransformShape;
+        sceneInfoPtr->defaultMaterialInfo = defaultMaterialInfo;
+        sceneInfoPtr->viewHandedness = viewHandedness;
+
+        //////////////////////////////////////////
+        // Proceed with node tree traversal to convert scene
+        //////////////////////////////////////////
+
+        for (MeshPropaties meshProps : aMeshProps)
+        {
+            RED::Object* result = convertNordTree(resourceManager, *sceneInfoPtr, meshProps);
+
+            if (result)
+                itransform->AddChild(result, RED_SHP_DAG_NO_UPDATE, iresourceManager->GetState());
+        }
+
+        return sceneInfoPtr;
+    }
+
+    RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextHPS& a_ioConversionContext, MeshPropaties meshProps)
+    {
+        RED_RC rc;
+
+        RED::IResourceManager* iresourceManager = a_resourceManager->As<RED::IResourceManager>();
+
+        //////////////////////////////////////////
+        // Retrieve segment transform matrix it has one.
+        // We want here the individual matrix, not the net one
+        // because we benifit of Luminate transform stack as well.
+        //////////////////////////////////////////
+
+        RED::Matrix redMatrix = RED::Matrix::IDENTITY;
+        redMatrix.SetColumnMajorMatrix(meshProps.matrix);
+
+        RED::Object* material = nullptr;
+        std::vector<RED::Object*> meshShapes;
+
+        iresourceManager->CreateMaterial(material, iresourceManager->GetState());
+        RED::IMaterial* imatr = material->As< RED::IMaterial >();
+        RED::Color color = RED::Color(float(meshProps.color.m_dRed), float(meshProps.color.m_dGreen), float(meshProps.color.m_dBlue), 1.f);
+        rc = imatr->SetupGenericDiffuseMaterial(false, color, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,
+            &RED::LayerSet::ALL_LAYERS, NULL, a_resourceManager, iresourceManager->GetState());
+
+        RED::Object* shape = nullptr;
+        shape = convertHEMeshToREDMeshShape(iresourceManager->GetState(), meshProps.meshData);
+
+        if (shape != nullptr)
+            meshShapes.push_back(shape);
+
+        //////////////////////////////////////////
+        // Create RED transform shape associated to segment
+        //////////////////////////////////////////
+
+        RED::Object* transform = RED::Factory::CreateInstance(CID_REDTransformShape);
+        RED::ITransformShape* itransform = transform->As<RED::ITransformShape>();
+
+        transform->SetID(meshProps.name);
+
+        // Apply transform matrix.
+        RC_CHECK(itransform->SetMatrix(&redMatrix, iresourceManager->GetState()));
+
+        // Apply material if any.
+        if (material != nullptr)
+            RC_CHECK(transform->As<RED::IShape>()->SetMaterial(material, iresourceManager->GetState()));
+
+        // Add geometry shapes if any.
+        for (RED::Object* meshShape : meshShapes)
+            RC_CHECK(itransform->AddChild(meshShape, RED_SHP_DAG_NO_UPDATE, iresourceManager->GetState()));
+
+        return transform;
+    }
+
+    RED::Object* convertHEMeshToREDMeshShape(const RED::State& a_state, A3DMeshData a_meshData)
+    {
+        RED_RC rc;
+
+        RED::Object* result = RED::Factory::CreateInstance(CID_REDMeshShape);
+        RED::IMeshShape* imesh = result->As<RED::IMeshShape>();
+
+        std::vector<float> points;
+        for (int i = 0; i < a_meshData.m_uiCoordSize; i++)
+            points.push_back(a_meshData.m_pdCoords[i]);
+
+        rc = imesh->SetArray(RED::MCL_VERTEX, points.data(), a_meshData.m_uiCoordSize / 3, 3, RED::MFT_FLOAT, a_state);
+
+        int triangleCount = 0;
+        RED::Vector<int> indices;
+        int cnt = 0;
+        for (int i = 0; i < a_meshData.m_uiFaceSize; i++)
+        {
+            int faceCnt = a_meshData.m_puiTriangleCountPerFace[i];
+            triangleCount += faceCnt;
+            for (int j = 0; j < faceCnt * 3; j++)
+            {
+                indices.push_back(a_meshData.m_puiVertexIndicesPerFace[cnt++]);
+            }
+        }
+
+        rc = imesh->AddTriangles(&indices[0], triangleCount, a_state);
+
+        return result;
     }
 
     RED_RC resizeWindow(RED::Object* a_window, int a_newWidth, int a_newHeight)
@@ -640,6 +718,32 @@ namespace HC_luminate_bridge {
             iresourceManager->GetState()));
 
         a_outCamera = viewpoint;
+        return RED_OK;
+    }
+
+    RED_RC destroyScene(LuminateSceneInfo const& a_sceneInfo)
+    {
+        //////////////////////////////////////////
+        // Get the resource manager singleton.
+        //////////////////////////////////////////
+
+        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+
+        //////////////////////////////////////////
+        // Delete scene root and all scene shared resources.
+        //////////////////////////////////////////
+
+        RC_TEST(RED::Factory::DeleteInstance(a_sceneInfo.rootTransformShape, iresourceManager->GetState()));
+
+        for (auto const& materialEntry : a_sceneInfo.materials) {
+            RC_TEST(iresourceManager->DeleteMaterial(materialEntry.second, iresourceManager->GetState()));
+        }
+
+        for (auto const& imageEntry : a_sceneInfo.imageNameToLuminateMap) {
+            RC_TEST(iresourceManager->DeleteImage(imageEntry.second, iresourceManager->GetState()));
+        }
+
         return RED_OK;
     }
 

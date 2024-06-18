@@ -447,8 +447,6 @@ answer_to_connection(void* cls,
         /* Upload finished */
         if (0 == strcmp(url, "/Clear"))
         {
-            pHCLuminateBridge->saveImg();
-
             // Delete SC model
             char scDir[FILENAME_MAX];
             sprintf(scDir, "%s%s", s_pcScModelsDir, con_info->sessionId);
@@ -554,6 +552,9 @@ answer_to_connection(void* cls,
             if (!paramStrToDbl("width", width));
             if (!paramStrToDbl("height", height));
 
+            std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
+
+
             if (NULL != pHCLuminateBridge)
             {
                 pHCLuminateBridge->shutdown();
@@ -566,7 +567,7 @@ answer_to_connection(void* cls,
 
             if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, 800, 600, cameraInfo))
             {
-                pHCLuminateBridge->syncScene();
+                pHCLuminateBridge->syncScene(aMeshProps, cameraInfo);
                 pHCLuminateBridge->draw();
                 //pHCLuminateBridge->saveImg();
             }
@@ -586,7 +587,7 @@ answer_to_connection(void* cls,
             floatArr.push_back(statistics.renderingProgress);
             floatArr.push_back(statistics.remainingTimeMilliseconds);
 
-            if (90 <= statistics.renderingProgress * 100)
+            if (20 <= statistics.renderingProgress * 100)
                 pHCLuminateBridge->saveImg();
 
             con_info->answerstring = response_success;
