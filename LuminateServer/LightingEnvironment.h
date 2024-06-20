@@ -125,7 +125,7 @@ namespace HC_luminate_bridge {
      * @param[in] a_model Lighting model to setup.
      * @return RED_OK if success, otherwise error code.
      */
-    RED_RC addDefaultModel(RED::Object* a_window, RED::Object* a_transformShape, DefaultLightingModel const& a_model);
+    RED_RC addDefaultModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, DefaultLightingModel const& a_model);
 
     /**
      * Removes a default lighting model from a scene.
@@ -135,7 +135,7 @@ namespace HC_luminate_bridge {
      * @return RED_OK if success, otherwise error code.
      */
     RED_RC
-    removeDefaultModel(RED::Object* a_window, RED::Object* a_transformShape, DefaultLightingModel const& a_model);
+    removeDefaultModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, DefaultLightingModel const& a_model);
 
     /**
      * Add a sun/sky lighting model to a scene.
@@ -145,7 +145,7 @@ namespace HC_luminate_bridge {
      * @param[in] a_model Lighting model to setup.
      * @return RED_OK if success, otherwise error code.
      */
-    RED_RC addSunSkyModel(RED::Object* a_window, RED::Object* a_transformShape, PhysicalSunSkyLightingModel const& a_model);
+    RED_RC addSunSkyModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, PhysicalSunSkyLightingModel const& a_model);
 
     /**
      * Removes a sun/sky lighting model from a scene.
@@ -155,7 +155,7 @@ namespace HC_luminate_bridge {
      * @return RED_OK if success, otherwise error code.
      */
     RED_RC
-    removeSunSkyModel(RED::Object* a_window, RED::Object* a_transformShape, PhysicalSunSkyLightingModel const& a_model);
+    removeSunSkyModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, PhysicalSunSkyLightingModel const& a_model);
 
     /**
      * Add an environment map lighting model to a scene.
@@ -166,7 +166,7 @@ namespace HC_luminate_bridge {
      * @return RED_OK if success, otherwise error code.
      */
     RED_RC
-    addEnvironmentMapModel(RED::Object* a_window, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model);
+    addEnvironmentMapModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model);
 
     /**
      * Removes an environment map lighting model from a scene.
@@ -176,7 +176,7 @@ namespace HC_luminate_bridge {
      * @return RED_OK if success, otherwise error code.
      */
     RED_RC
-    removeEnvironmentMapModel(RED::Object* a_window, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model);
+    removeEnvironmentMapModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model);
 
 } // namespace HC_luminate_bridge
 

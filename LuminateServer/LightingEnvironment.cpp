@@ -249,6 +249,7 @@ namespace HC_luminate_bridge {
     }
 
     RED_RC setWindowBackgroundImage(RED::Object* a_window,
+                                    const int a_num_vrl,
                                     RED::Object* a_backgroundImage,
                                     bool a_visible,
                                     const RED::Color& a_backgroundColor)
@@ -268,7 +269,8 @@ namespace HC_luminate_bridge {
         RED::IWindow* iwindow = a_window->As<RED::IWindow>();
 
         RED::Object* vrl;
-        RC_TEST(iwindow->GetDefaultVRL(vrl));
+        //RC_TEST(iwindow->GetDefaultVRL(vrl));
+        RC_TEST(iwindow->GetVRL(vrl, a_num_vrl));
 
         RED::IViewpointRenderList* ivrl = vrl->As<RED::IViewpointRenderList>();
 
@@ -291,7 +293,7 @@ namespace HC_luminate_bridge {
         return RED_OK;
     }
 
-    RED_RC addDefaultModel(RED::Object* a_window, RED::Object* a_transformShape, DefaultLightingModel const& a_model)
+    RED_RC addDefaultModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, DefaultLightingModel const& a_model)
     {
         //////////////////////////////////////////
         // Get the resource manager singleton.
@@ -304,7 +306,7 @@ namespace HC_luminate_bridge {
         // Set the window background image and back color.
         //////////////////////////////////////////
 
-        setWindowBackgroundImage(a_window, a_model.backgroundCubeImage, true, RED::Color::WHITE);
+        setWindowBackgroundImage(a_window, a_num_vrl, a_model.backgroundCubeImage, true, RED::Color::WHITE);
 
         //////////////////////////////////////////
         // Set the sky light as child
@@ -315,7 +317,7 @@ namespace HC_luminate_bridge {
         return RED_RC();
     }
 
-    RED_RC removeDefaultModel(RED::Object* a_window, RED::Object* a_transformShape, DefaultLightingModel const& a_model)
+    RED_RC removeDefaultModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, DefaultLightingModel const& a_model)
     {
         //////////////////////////////////////////
         // Get the resource manager singleton.
@@ -328,7 +330,7 @@ namespace HC_luminate_bridge {
         // Removes background image from the scene
         //////////////////////////////////////////
 
-        setWindowBackgroundImage(a_window, nullptr, false, RED::Color::WHITE);
+        setWindowBackgroundImage(a_window, a_num_vrl, nullptr, false, RED::Color::WHITE);
 
         //////////////////////////////////////////
         // Remove the light
@@ -339,7 +341,7 @@ namespace HC_luminate_bridge {
         return RED_RC();
     }
 
-    RED_RC addSunSkyModel(RED::Object* a_window, RED::Object* a_transformShape, PhysicalSunSkyLightingModel const& a_model)
+    RED_RC addSunSkyModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, PhysicalSunSkyLightingModel const& a_model)
     {
         //////////////////////////////////////////
         // Get the resource manager singleton.
@@ -354,7 +356,7 @@ namespace HC_luminate_bridge {
         // ignore the background color.
         //////////////////////////////////////////
 
-        setWindowBackgroundImage(a_window, a_model.backgroundCubeImage, true, RED::Color::WHITE);
+        setWindowBackgroundImage(a_window, a_num_vrl, a_model.backgroundCubeImage, true, RED::Color::WHITE);
 
         //////////////////////////////////////////
         // Set the sky/sun lights as children.
@@ -367,7 +369,7 @@ namespace HC_luminate_bridge {
         return RED_OK;
     }
 
-    RED_RC removeSunSkyModel(RED::Object* a_window, RED::Object* a_transformShape, PhysicalSunSkyLightingModel const& a_model)
+    RED_RC removeSunSkyModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, PhysicalSunSkyLightingModel const& a_model)
     {
         //////////////////////////////////////////
         // Get the resource manager singleton.
@@ -380,7 +382,7 @@ namespace HC_luminate_bridge {
         // Removes background image from the scene
         //////////////////////////////////////////
 
-        setWindowBackgroundImage(a_window, nullptr, true, RED::Color::WHITE);
+        setWindowBackgroundImage(a_window, a_num_vrl, nullptr, true, RED::Color::WHITE);
 
         //////////////////////////////////////////
         // Remove the lights
@@ -394,7 +396,7 @@ namespace HC_luminate_bridge {
     }
 
     RED_RC
-    addEnvironmentMapModel(RED::Object* a_window, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model)
+    addEnvironmentMapModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model)
     {
         //////////////////////////////////////////
         // Get the resource manager singleton.
@@ -407,7 +409,7 @@ namespace HC_luminate_bridge {
         // Set the window background image and back color.
         //////////////////////////////////////////
 
-        setWindowBackgroundImage(a_window, a_model.backgroundCubeImage, a_model.imageIsVisible, a_model.backColor);
+        setWindowBackgroundImage(a_window, a_num_vrl, a_model.backgroundCubeImage, a_model.imageIsVisible, a_model.backColor);
 
         //////////////////////////////////////////
         // Set the sky light as child
@@ -420,7 +422,7 @@ namespace HC_luminate_bridge {
     }
 
     RED_RC
-    removeEnvironmentMapModel(RED::Object* a_window, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model)
+    removeEnvironmentMapModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model)
     {
         //////////////////////////////////////////
         // Get the resource manager singleton.
@@ -433,7 +435,7 @@ namespace HC_luminate_bridge {
         // Removes background image from the scene
         //////////////////////////////////////////
 
-        setWindowBackgroundImage(a_window, nullptr, false, RED::Color::WHITE);
+        setWindowBackgroundImage(a_window, a_num_vrl, nullptr, false, RED::Color::WHITE);
 
         //////////////////////////////////////////
         // Remove the light

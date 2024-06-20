@@ -105,6 +105,7 @@ namespace HC_luminate_bridge {
 		int m_windowWidth;
 		int m_windowHeight;
 		RED::Object* m_auxvrl;
+		int m_iVRL;
 		
 		// Camera.
 		RED::Object* m_camera;
@@ -214,7 +215,7 @@ namespace HC_luminate_bridge {
 		 */
 		RED_RC removeCurrentLightingEnvironment();
 
-		static RED_RC createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera);
+		RED_RC createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, RED::Object*& a_outCamera);
 
 		/**
 		 * Synchronize the Luminate camera with the 3DF/HPS one.

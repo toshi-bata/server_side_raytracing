@@ -26,7 +26,7 @@ namespace HC_luminate_bridge {
         m_frameIsComplete(false), m_newFrameIsRequired(true), m_axisTriad(),  m_bSyncCamera(false),
         m_lightingModel(LightingModel::No), m_windowWidth(0), m_windowHeight(0), m_defaultLightingModel(), m_sunSkyLightingModel(),
         m_environmentMapLightingModel(), m_frameTracingMode(RED::FTF_PATH_TRACING), m_selectedSegmentTransformIsDirty(false),
-        m_rootTransformIsDirty(false)
+        m_rootTransformIsDirty(false), m_iVRL(0)
     {
 
     }
@@ -138,12 +138,10 @@ namespace HC_luminate_bridge {
         // Create and initialize Luminate camera.
         //////////////////////////////////////////
 
-        int vrlId = 0;
-
 #ifdef OFFSCREEN_MODE
-        vrlId = 1;
+        m_iVRL = 1;
 #endif
-        rc = createCamera(m_window, m_windowWidth, m_windowHeight, vrlId, m_camera);
+        rc = createCamera(m_window, m_windowWidth, m_windowHeight, m_camera);
         if (rc != RED_OK)
             return false;
 
@@ -155,7 +153,7 @@ namespace HC_luminate_bridge {
         // Initialize an axis triad to be displayed
         //////////////////////////////////////////
 
-        rc = createAxisTriad(m_window, m_axisTriad);
+        rc = createAxisTriad(m_window, m_iVRL, m_axisTriad);
         if (rc != RED_OK)
             return false;
 
@@ -306,7 +304,7 @@ namespace HC_luminate_bridge {
 #ifdef OFFSCREEN_MODE
         vrlId = 1;
 #endif
-        RED_RC rc = createCamera(m_window, m_windowWidth, m_windowHeight, vrlId, newCamera);
+        RED_RC rc = createCamera(m_window, m_windowWidth, m_windowHeight, newCamera);
 
         if (rc != RED_OK)
             return false;
@@ -321,13 +319,13 @@ namespace HC_luminate_bridge {
 
         switch (m_lightingModel) {
         case LightingModel::Default:
-            addDefaultModel(m_window, newSceneInfo->rootTransformShape, m_defaultLightingModel);
+            addDefaultModel(m_window, m_iVRL, newSceneInfo->rootTransformShape, m_defaultLightingModel);
             break;
         case LightingModel::PhysicalSunSky:
-            addSunSkyModel(m_window, newSceneInfo->rootTransformShape, m_sunSkyLightingModel);
+            addSunSkyModel(m_window, m_iVRL, newSceneInfo->rootTransformShape, m_sunSkyLightingModel);
             break;
         case LightingModel::EnvironmentMap:
-            addEnvironmentMapModel(m_window, newSceneInfo->rootTransformShape, m_environmentMapLightingModel);
+            addEnvironmentMapModel(m_window, m_iVRL, newSceneInfo->rootTransformShape, m_environmentMapLightingModel);
             break;
         };
 
@@ -432,14 +430,14 @@ namespace HC_luminate_bridge {
     }
 
     RED_RC
-    HCLuminateBridge::createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera)
+    HCLuminateBridge::createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, RED::Object*& a_outCamera)
     {
         //////////////////////////////////////////
         // Create a Luminate camera which will render
         // in the window.
         //////////////////////////////////////////
 
-        RC_TEST(createRedCamera(a_window, a_windowWidh, a_windowHeight, a_vrlId, a_outCamera));
+        RC_TEST(createRedCamera(a_window, a_windowWidh, a_windowHeight, m_iVRL, a_outCamera));
 
         //////////////////////////////////////////
         // Set camera scope rendering options
@@ -463,13 +461,13 @@ namespace HC_luminate_bridge {
 
         switch (m_lightingModel) {
         case LightingModel::Default:
-            rc = removeDefaultModel(m_window, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
+            rc = removeDefaultModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
             break;
         case LightingModel::PhysicalSunSky:
-            rc = removeSunSkyModel(m_window, m_conversionDataPtr->rootTransformShape, m_sunSkyLightingModel);
+            rc = removeSunSkyModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_sunSkyLightingModel);
             break;
         case LightingModel::EnvironmentMap:
-            rc = removeEnvironmentMapModel(m_window, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
+            rc = removeEnvironmentMapModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
             break;
         default:
             break;
@@ -485,7 +483,7 @@ namespace HC_luminate_bridge {
     {
         removeCurrentLightingEnvironment();
         m_lightingModel = LightingModel::Default;
-        addDefaultModel(m_window, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
+        addDefaultModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
         resetFrame();
 
         return RED_RC();
@@ -506,7 +504,7 @@ namespace HC_luminate_bridge {
             rc = createEnvironmentImageLightingModel(
                 a_imageFilepath.c_str(), a_backgroundColor, a_showImage, m_environmentMapLightingModel);
 
-        addEnvironmentMapModel(m_window, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
+        addEnvironmentMapModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
         resetFrame();
 
         return rc;
@@ -1159,12 +1157,10 @@ namespace HC_luminate_bridge {
 
             RED::FrameStatistics fstats = iwindow->GetFrameStatistics();
             int num_vrl = 0;
-            int num_vp = 1;
 #ifdef OFFSCREEN_MODE
             num_vrl = 1;
-            num_vp = 0;
 #endif
-            const RED::ViewpointStatistics& camstats = fstats.GetViewpointStatistics(num_vrl, num_vp);
+            const RED::ViewpointStatistics& camstats = fstats.GetViewpointStatistics(num_vrl, 1);
 
             a_stats->renderingProgress = camstats.GetSoftwarePassProgress();
             a_stats->remainingTimeMilliseconds = camstats.GetSoftwareRemainingTime();

@@ -38,7 +38,7 @@ namespace HC_luminate_bridge {
      * @param[in] a_outAxisTriad Output axis triad informations.
      * @return RED_OK if success, otherwise error code.
      */
-    RED_RC createAxisTriad(RED::Object* a_window, AxisTriad& a_outAxisTriad);
+    RED_RC createAxisTriad(RED::Object* a_window, const int a_num_vrl, AxisTriad& a_outAxisTriad);
 
 } // namespace hoops_luminate_bridge
 

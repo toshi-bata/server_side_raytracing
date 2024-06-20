@@ -57,7 +57,7 @@ namespace HC_luminate_bridge {
         return RED_OK;
     }
 
-    RED_RC createAxisTriad(RED::Object* a_window, AxisTriad& a_outAxisTriad)
+    RED_RC createAxisTriad(RED::Object* a_window, const int a_num_vrl, AxisTriad& a_outAxisTriad)
     {
         // Retrieve the resource manager from singleton:
         // ---------------------------------------------
@@ -72,7 +72,8 @@ namespace HC_luminate_bridge {
         RED::IWindow* iwindow = a_window->As<RED::IWindow>();
 
         RED::Object* vrl;
-        RC_TEST(iwindow->GetDefaultVRL(vrl));
+        //RC_TEST(iwindow->GetDefaultVRL(vrl));
+        RC_TEST(iwindow->GetVRL(vrl, a_num_vrl));
         RED::IViewpointRenderList* ivrl = vrl->As<RED::IViewpointRenderList>();
 
         int width, height;
