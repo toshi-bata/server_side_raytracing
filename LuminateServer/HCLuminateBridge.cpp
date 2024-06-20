@@ -26,9 +26,11 @@ namespace HC_luminate_bridge {
         m_frameIsComplete(false), m_newFrameIsRequired(true), m_axisTriad(),  m_bSyncCamera(false),
         m_lightingModel(LightingModel::No), m_windowWidth(0), m_windowHeight(0), m_defaultLightingModel(), m_sunSkyLightingModel(),
         m_environmentMapLightingModel(), m_frameTracingMode(RED::FTF_PATH_TRACING), m_selectedSegmentTransformIsDirty(false),
-        m_rootTransformIsDirty(false), m_iVRL(0)
+        m_rootTransformIsDirty(false), m_iVRL(1)
     {
-
+#ifdef _DEBUG
+        m_iVRL = 0;
+#endif
     }
 
     HCLuminateBridge::~HCLuminateBridge()
@@ -120,9 +122,9 @@ namespace HC_luminate_bridge {
 
         RED::IWindow* iwindow = m_window->As<RED::IWindow>();
 
-#ifndef OFFSCREEN_MODE
+#ifdef _DEBUG
         RED::Object* defaultVRLObj = NULL;
-        RC_CHECK(iwindow->GetVRL(defaultVRLObj, 0));
+        RC_CHECK(iwindow->GetDefaultVRL(defaultVRLObj));
 
         RED::IViewpointRenderList* defaultVRL = defaultVRLObj->As<RED::IViewpointRenderList>();
         RC_CHECK(defaultVRL->SetSoftAntiAlias(20, iresourceManager->GetState()));
@@ -138,16 +140,9 @@ namespace HC_luminate_bridge {
         // Create and initialize Luminate camera.
         //////////////////////////////////////////
 
-#ifdef OFFSCREEN_MODE
-        m_iVRL = 1;
-#endif
         rc = createCamera(m_window, m_windowWidth, m_windowHeight, m_camera);
         if (rc != RED_OK)
             return false;
-
-#ifdef OFFSCREEN_MODE
-        RC_TEST(iauxvrl->SetClearColor(RED::Color::WHITE, iresourceManager->GetState()));
-#endif
 
         //////////////////////////////////////////
         // Initialize an axis triad to be displayed
@@ -252,7 +247,7 @@ namespace HC_luminate_bridge {
         RED_RC rc = checkDrawTracing(m_window, m_frameTracingMode, m_frameIsComplete, m_newFrameIsRequired);
         //RED_RC rc = checkDrawHardware(m_window);
 
-        checkFrameStatistics(m_window, &m_lastFrameStatistics, m_frameIsComplete);
+        checkFrameStatistics(m_window, m_iVRL, &m_lastFrameStatistics, m_frameIsComplete);
 
         return rc == RED_OK;
     }
@@ -299,11 +294,6 @@ namespace HC_luminate_bridge {
         //////////////////////////////////////////
 
         RED::Object* newCamera = nullptr;
-        int vrlId = 0;
-
-#ifdef OFFSCREEN_MODE
-        vrlId = 1;
-#endif
         RED_RC rc = createCamera(m_window, m_windowWidth, m_windowHeight, newCamera);
 
         if (rc != RED_OK)
@@ -405,7 +395,7 @@ namespace HC_luminate_bridge {
     bool HCLuminateBridge::saveImg()
     {
         RED_RC rc;
-#ifdef OFFSCREEN_MODE
+#ifndef _DEBUG
         RED::IViewpointRenderList* defaultVRL = m_auxvrl->As<RED::IViewpointRenderList>();
         RED::Object* renderimg = defaultVRL->GetRenderImage();
 
@@ -1150,17 +1140,13 @@ namespace HC_luminate_bridge {
         return RED_OK;
     }
 
-    RED_RC checkFrameStatistics(RED::Object* a_window, FrameStatistics* a_stats, bool& a_ioFrameIsComplete)
+    RED_RC checkFrameStatistics(RED::Object* a_window, const int a_num_vrl, FrameStatistics* a_stats, bool& a_ioFrameIsComplete)
     {
         if (!a_ioFrameIsComplete) {
             RED::IWindow* iwindow = a_window->As<RED::IWindow>();
 
             RED::FrameStatistics fstats = iwindow->GetFrameStatistics();
-            int num_vrl = 0;
-#ifdef OFFSCREEN_MODE
-            num_vrl = 1;
-#endif
-            const RED::ViewpointStatistics& camstats = fstats.GetViewpointStatistics(num_vrl, 1);
+            const RED::ViewpointStatistics& camstats = fstats.GetViewpointStatistics(a_num_vrl, 1);
 
             a_stats->renderingProgress = camstats.GetSoftwarePassProgress();
             a_stats->remainingTimeMilliseconds = camstats.GetSoftwareRemainingTime();

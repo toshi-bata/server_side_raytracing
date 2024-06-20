@@ -102,7 +102,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;OFFSCREEN_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Debug-static;$(HEXCHANGE_INSTALL_DIR)\include;$(HLUMINATE_INSTALL_DIR)\Redsdk.m\Public;$(HLUMINATE_INSTALL_DIR)\Tools.m\Public</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>
@@ -139,7 +139,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;OFFSCREEN_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HEXCHANGE_INSTALL_DIR)/include;$(HLUMINATE_INSTALL_DIR)\Redsdk.m\Public;$(HLUMINATE_INSTALL_DIR)\Tools.m\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>

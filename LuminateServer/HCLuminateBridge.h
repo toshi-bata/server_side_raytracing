@@ -308,7 +308,7 @@ namespace HC_luminate_bridge {
 
 	RED_RC checkDrawHardware(RED::Object* a_window);
 
-	RED_RC checkFrameStatistics(RED::Object* a_window, FrameStatistics* a_stats, bool& a_ioFrameIsComplete);
+	RED_RC checkFrameStatistics(RED::Object* a_window, const int a_num_vrl, FrameStatistics* a_stats, bool& a_ioFrameIsComplete);
 
 	RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextHPS& a_ioConversionContext, MeshPropaties aMeshProps);
 
