@@ -23,7 +23,10 @@
 namespace HC_luminate_bridge {
 
     HCLuminateBridge::HCLuminateBridge() :
-        m_frameIsComplete(false), m_newFrameIsRequired(true), m_frameTracingMode(RED::FTF_PATH_TRACING)
+        m_frameIsComplete(false), m_newFrameIsRequired(true), m_axisTriad(),  m_bSyncCamera(false),
+        m_lightingModel(LightingModel::No), m_windowWidth(0), m_windowHeight(0), m_defaultLightingModel(), m_sunSkyLightingModel(),
+        m_environmentMapLightingModel(), m_frameTracingMode(RED::FTF_PATH_TRACING), m_selectedSegmentTransformIsDirty(false),
+        m_rootTransformIsDirty(false)
     {
 
     }
@@ -32,7 +35,8 @@ namespace HC_luminate_bridge {
     {
     }
 
-    bool HCLuminateBridge::initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight, CameraInfo a_cameraInfo)
+    bool HCLuminateBridge::initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight,
+        std::string const& a_environmentMapFilepath, CameraInfo a_cameraInfo)
     {
         //////////////////////////////////////////
         // Assign Luminate license.
@@ -42,6 +46,7 @@ namespace HC_luminate_bridge {
         RED_RC rc = setLicense(a_license.c_str(), licenseIsActive);
         if (rc != RED_OK || !licenseIsActive)
             return false;
+
         //////////////////////////////////////////
         // Select Luminate rendering mode.
         //////////////////////////////////////////
@@ -91,6 +96,7 @@ namespace HC_luminate_bridge {
         //////////////////////////////////////////
         // Create a Luminate window.
         //////////////////////////////////////////
+
         m_windowWidth = a_windowWidth;
         m_windowHeight = a_windowHeight;
 
@@ -114,20 +120,44 @@ namespace HC_luminate_bridge {
 
         RED::IWindow* iwindow = m_window->As<RED::IWindow>();
 
+#ifndef OFFSCREEN_MODE
+        RED::Object* defaultVRLObj = NULL;
+        RC_CHECK(iwindow->GetVRL(defaultVRLObj, 0));
+
+        RED::IViewpointRenderList* defaultVRL = defaultVRLObj->As<RED::IViewpointRenderList>();
+        RC_CHECK(defaultVRL->SetSoftAntiAlias(20, iresourceManager->GetState()));
+#else
         // Auxiliary VRL creation
         rc = iwindow->CreateVRL(m_auxvrl, m_windowWidth, m_windowHeight, RED::FMT_RGBA, true, iresourceManager->GetState());
 
         RED::IViewpointRenderList* iauxvrl = m_auxvrl->As<RED::IViewpointRenderList>();
         RC_CHECK(iauxvrl->SetSoftAntiAlias(20, iresourceManager->GetState()));
+#endif
 
         //////////////////////////////////////////
         // Create and initialize Luminate camera.
         //////////////////////////////////////////
-        rc = createCamera(m_window, m_windowWidth, m_windowHeight, 1, m_auxcamera);
+
+        int vrlId = 0;
+
+#ifdef OFFSCREEN_MODE
+        vrlId = 1;
+#endif
+        rc = createCamera(m_window, m_windowWidth, m_windowHeight, vrlId, m_camera);
         if (rc != RED_OK)
             return false;
 
+#ifdef OFFSCREEN_MODE
         RC_TEST(iauxvrl->SetClearColor(RED::Color::WHITE, iresourceManager->GetState()));
+#endif
+
+        //////////////////////////////////////////
+        // Initialize an axis triad to be displayed
+        //////////////////////////////////////////
+
+        rc = createAxisTriad(m_window, m_axisTriad);
+        if (rc != RED_OK)
+            return false;
 
         //////////////////////////////////////////
         // Synchronize HC and Luminate cameras for
@@ -145,7 +175,7 @@ namespace HC_luminate_bridge {
         //////////////////////////////////////////
         m_conversionDataPtr.reset(new LuminateSceneInfo());
         m_conversionDataPtr->rootTransformShape = RED::Factory::CreateInstance(CID_REDTransformShape);
-        addSceneToCamera(m_auxcamera, *m_conversionDataPtr);
+        addSceneToCamera(m_camera, *m_conversionDataPtr);
 
         //////////////////////////////////////////
         // Initialize the lighting environment with
@@ -153,7 +183,16 @@ namespace HC_luminate_bridge {
         // If the scene is initialy empty, we do not
         // need to add it anywhere.
         //////////////////////////////////////////
-        //rc = createDefaultModel(m_defaultLightingModel);
+        rc = createDefaultModel(m_defaultLightingModel);
+        //rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
+
+        if (a_environmentMapFilepath.empty())
+            rc = setDefaultLightEnvironment();
+        else {
+            rc = createEnvironmentImageLightingModel(
+                a_environmentMapFilepath.c_str(), RED::Color::WHITE, true, m_environmentMapLightingModel);
+            rc = setEnvMapLightEnvironment(a_environmentMapFilepath, true, RED::Color::WHITE);
+        }
 
         return true;
     }
@@ -220,6 +259,21 @@ namespace HC_luminate_bridge {
         return rc == RED_OK;
     }
 
+    void HCLuminateBridge::resetFrame()
+    {
+        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+
+        if (iresourceManager->GetState().GetNumber() > 1) {
+            RED::IWindow* iwin = m_window->As<RED::IWindow>();
+            iwin->FrameTracingStop();
+
+            iresourceManager->BeginState();
+        }
+
+        m_newFrameIsRequired = true;
+    }
+
     bool HCLuminateBridge::syncScene(std::vector <MeshPropaties> aMeshProps, CameraInfo a_cameraInfo)
     {
         //////////////////////////////////////////
@@ -247,7 +301,13 @@ namespace HC_luminate_bridge {
         //////////////////////////////////////////
 
         RED::Object* newCamera = nullptr;
-        RED_RC rc = createCamera(m_window, m_windowWidth, m_windowHeight, 1, newCamera);
+        int vrlId = 0;
+
+#ifdef OFFSCREEN_MODE
+        vrlId = 1;
+#endif
+        RED_RC rc = createCamera(m_window, m_windowWidth, m_windowHeight, vrlId, newCamera);
+
         if (rc != RED_OK)
             return false;
 
@@ -259,17 +319,17 @@ namespace HC_luminate_bridge {
         // root.
         //////////////////////////////////////////
 
-        //switch (m_lightingModel) {
-        //case LightingModel::Default:
-        //    addDefaultModel(m_window, newSceneInfo->rootTransformShape, m_defaultLightingModel);
-        //    break;
-        //case LightingModel::PhysicalSunSky:
-        //    addSunSkyModel(m_window, newSceneInfo->rootTransformShape, m_sunSkyLightingModel);
-        //    break;
-        //case LightingModel::EnvironmentMap:
-        //    addEnvironmentMapModel(m_window, newSceneInfo->rootTransformShape, m_environmentMapLightingModel);
-        //    break;
-        //};
+        switch (m_lightingModel) {
+        case LightingModel::Default:
+            addDefaultModel(m_window, newSceneInfo->rootTransformShape, m_defaultLightingModel);
+            break;
+        case LightingModel::PhysicalSunSky:
+            addSunSkyModel(m_window, newSceneInfo->rootTransformShape, m_sunSkyLightingModel);
+            break;
+        case LightingModel::EnvironmentMap:
+            addEnvironmentMapModel(m_window, newSceneInfo->rootTransformShape, m_environmentMapLightingModel);
+            break;
+        };
 
         //////////////////////////////////////////
         // Remove and cleanup previous scene and
@@ -283,7 +343,8 @@ namespace HC_luminate_bridge {
                 return false;
         }
 
-        rc = RED::Factory::DeleteInstance(m_auxcamera, iresourceManager->GetState());
+        rc = RED::Factory::DeleteInstance(m_camera, iresourceManager->GetState());
+  
         if (rc != RED_OK)
             return false;
 
@@ -294,8 +355,8 @@ namespace HC_luminate_bridge {
         // new scene.
         //////////////////////////////////////////
 
-        m_auxcamera = newCamera;
-        
+        m_camera = newCamera;
+
         return syncLuminateCamera(a_cameraInfo) == RED_OK;
         
         return true;
@@ -346,32 +407,32 @@ namespace HC_luminate_bridge {
     bool HCLuminateBridge::saveImg()
     {
         RED_RC rc;
-
+#ifdef OFFSCREEN_MODE
         RED::IViewpointRenderList* defaultVRL = m_auxvrl->As<RED::IViewpointRenderList>();
         RED::Object* renderimg = defaultVRL->GetRenderImage();
 
         rc = RED::ImageTools::Save(renderimg, false, "C:\\temp\\my_image.png", false, true, 1.0);
-
+#endif
         return true;
     }
 
     RED_RC HCLuminateBridge::syncLuminateCamera(CameraInfo a_cameraInfo)
     {
+        RED_RC rc;
+
         Handedness viewHandedness =
             m_conversionDataPtr != nullptr ? m_conversionDataPtr->viewHandedness : Handedness::RightHanded;
-        RED_RC rc = syncCameras(m_auxcamera, viewHandedness, m_windowWidth, m_windowHeight, a_cameraInfo);
 
-        if (rc != RED_OK)
-            return rc;
+        rc = syncCameras(m_camera, viewHandedness, m_windowWidth, m_windowHeight, a_cameraInfo);
+        rc = synchronizeAxisTriadWithCamera(m_axisTriad, m_camera);
 
-        //rc = synchronizeAxisTriadWithCamera(m_axisTriad, m_camera);
         m_newFrameIsRequired = true;
 
         return rc;
     }
 
     RED_RC
-        HCLuminateBridge::createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera)
+    HCLuminateBridge::createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera)
     {
         //////////////////////////////////////////
         // Create a Luminate camera which will render
@@ -391,6 +452,64 @@ namespace HC_luminate_bridge {
         RC_TEST(pp.SetToneMapping(RED::TMO_PHOTOGRAPHIC));
 
         return RED_OK;
+    }
+
+    RED_RC HCLuminateBridge::removeCurrentLightingEnvironment()
+    {
+        RED_RC rc = RED_OK;
+
+        if (m_conversionDataPtr == nullptr)
+            return rc;
+
+        switch (m_lightingModel) {
+        case LightingModel::Default:
+            rc = removeDefaultModel(m_window, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
+            break;
+        case LightingModel::PhysicalSunSky:
+            rc = removeSunSkyModel(m_window, m_conversionDataPtr->rootTransformShape, m_sunSkyLightingModel);
+            break;
+        case LightingModel::EnvironmentMap:
+            rc = removeEnvironmentMapModel(m_window, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
+            break;
+        default:
+            break;
+        }
+
+        if (rc == RED_OK)
+            m_lightingModel = LightingModel::No;
+
+        return rc;
+    }
+
+    RED_RC HCLuminateBridge::setDefaultLightEnvironment()
+    {
+        removeCurrentLightingEnvironment();
+        m_lightingModel = LightingModel::Default;
+        addDefaultModel(m_window, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
+        resetFrame();
+
+        return RED_RC();
+    }
+
+    RED_RC HCLuminateBridge::setEnvMapLightEnvironment(std::string const& a_imageFilepath,
+        bool a_showImage,
+        RED::Color const& a_backgroundColor)
+    {
+        removeCurrentLightingEnvironment();
+
+        m_lightingModel = LightingModel::EnvironmentMap;
+
+        RED_RC rc = RED_OK;
+        if (m_environmentMapLightingModel.imagePath != a_imageFilepath.c_str() ||
+            m_environmentMapLightingModel.backColor != a_backgroundColor ||
+            m_environmentMapLightingModel.imageIsVisible != a_showImage)
+            rc = createEnvironmentImageLightingModel(
+                a_imageFilepath.c_str(), a_backgroundColor, a_showImage, m_environmentMapLightingModel);
+
+        addEnvironmentMapModel(m_window, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
+        resetFrame();
+
+        return rc;
     }
 
     LuminateSceneInfoPtr HCLuminateBridge::convertScene(std::vector <MeshPropaties> aMeshProps)
@@ -454,6 +573,63 @@ namespace HC_luminate_bridge {
         return sceneInfoPtr;
     }
 
+
+    RealisticMaterialInfo getSegmentMaterialInfo(MeshPropaties meshProps,
+        RED::Object* a_resourceManager,
+        RealisticMaterialInfo const& a_baseMaterialInfo,
+        ImageNameToLuminateMap& a_ioImageNameToLuminateMap,
+        TextureNameImageNameMap& a_ioTextureNameImageNameMap,
+        PBRToRealisticConversionMap& a_ioPBRToRealisticConversionMap)
+    {
+        RealisticMaterialInfo materialInfo = a_baseMaterialInfo;
+        RED::Object* redImage;
+
+        if (1) 
+        {
+            std::string textureName;
+
+            // Determine diffuse color.
+            materialInfo.colorsByChannel[ColorChannels::DiffuseColor] = RED::Color(float(meshProps.color.m_dRed), float(meshProps.color.m_dBlue), float(meshProps.color.m_dGreen), 1.f);
+            textureName = "";
+
+            // Determine transmission color.
+            // Note that HPS transparency is determined by diffuse color alpha and the transmission channel
+            // is for greyscale opacity texture. The transmission concept is not the same than in Luminate.
+
+            RED::Color diffuseColor = materialInfo.colorsByChannel[ColorChannels::DiffuseColor];
+            if (diffuseColor.A() != 1.0f) {
+                float alpha = diffuseColor.A();
+                materialInfo.colorsByChannel[ColorChannels::TransmissionColor] = RED::Color(1.0f - alpha);
+            }
+
+            // Retrieve the segment diffuse texture name if it exists
+            //if (getFacesTexture(a_segmentKeyPath,
+            //    HPS::Material::Channel::DiffuseTexture,
+            //    materialInfo.textureNameByChannel[TextureChannels::DiffuseTexture])) {
+            //    registerTexture(a_segmentKeyPath,
+            //        materialInfo.textureNameByChannel[TextureChannels::DiffuseTexture].textureName,
+            //        a_resourceManager,
+            //        a_ioImageNameToLuminateMap,
+            //        a_ioTextureNameImageNameMap,
+            //        redImage);
+            //}
+
+            // Determine bump map
+            //if (getFacesTexture(a_segmentKeyPath,
+            //    HPS::Material::Channel::Bump,
+            //    materialInfo.textureNameByChannel[TextureChannels::BumpTexture])) {
+            //    registerTexture(a_segmentKeyPath,
+            //        materialInfo.textureNameByChannel[TextureChannels::BumpTexture].textureName,
+            //        a_resourceManager,
+            //        a_ioImageNameToLuminateMap,
+            //        a_ioTextureNameImageNameMap,
+            //        redImage);
+            //}
+        }
+
+        return materialInfo;
+    }
+
     RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextHPS& a_ioConversionContext, MeshPropaties meshProps)
     {
         RED_RC rc;
@@ -472,11 +648,18 @@ namespace HC_luminate_bridge {
         RED::Object* material = nullptr;
         std::vector<RED::Object*> meshShapes;
 
-        iresourceManager->CreateMaterial(material, iresourceManager->GetState());
-        RED::IMaterial* imatr = material->As< RED::IMaterial >();
-        RED::Color color = RED::Color(float(meshProps.color.m_dRed), float(meshProps.color.m_dGreen), float(meshProps.color.m_dBlue), 1.f);
-        rc = imatr->SetupGenericDiffuseMaterial(false, color, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,
-            &RED::LayerSet::ALL_LAYERS, NULL, a_resourceManager, iresourceManager->GetState());
+        RealisticMaterialInfo materialInfo = getSegmentMaterialInfo(meshProps,
+            a_resourceManager,
+            a_ioConversionContext.defaultMaterialInfo,
+            a_ioConversionContext.imageNameToLuminateMap,
+            a_ioConversionContext.textureNameImageNameMap,
+            a_ioConversionContext.pbrToRealisticConversionMap);
+
+        material = createREDMaterial(materialInfo,
+            a_resourceManager,
+            a_ioConversionContext.imageNameToLuminateMap,
+            a_ioConversionContext.textureNameImageNameMap,
+            a_ioConversionContext.materials);
 
         RED::Object* shape = nullptr;
         shape = convertHEMeshToREDMeshShape(iresourceManager->GetState(), meshProps.meshData);
@@ -534,6 +717,11 @@ namespace HC_luminate_bridge {
         }
 
         rc = imesh->AddTriangles(&indices[0], triangleCount, a_state);
+
+        std::vector<float> normols;
+        for (int i = 0; i < a_meshData.m_uiNormalSize; i++)
+            normols.push_back(a_meshData.m_pdNormals[i]);
+        rc = imesh->SetArray(RED::MCL_NORMAL, normols.data(), a_meshData.m_uiNormalSize / 3, 3, RED::MFT_FLOAT, a_state);
 
         return result;
     }
@@ -970,7 +1158,13 @@ namespace HC_luminate_bridge {
             RED::IWindow* iwindow = a_window->As<RED::IWindow>();
 
             RED::FrameStatistics fstats = iwindow->GetFrameStatistics();
-            const RED::ViewpointStatistics& camstats = fstats.GetViewpointStatistics(1, 0);
+            int num_vrl = 0;
+            int num_vp = 1;
+#ifdef OFFSCREEN_MODE
+            num_vrl = 1;
+            num_vp = 0;
+#endif
+            const RED::ViewpointStatistics& camstats = fstats.GetViewpointStatistics(num_vrl, num_vp);
 
             a_stats->renderingProgress = camstats.GetSoftwarePassProgress();
             a_stats->remainingTimeMilliseconds = camstats.GetSoftwareRemainingTime();

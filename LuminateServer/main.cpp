@@ -554,7 +554,6 @@ answer_to_connection(void* cls,
 
             std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
 
-
             if (NULL != pHCLuminateBridge)
             {
                 pHCLuminateBridge->shutdown();
@@ -565,7 +564,8 @@ answer_to_connection(void* cls,
 
             CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, width, height);
 
-            if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, 800, 600, cameraInfo))
+            std::string filepath = "";
+            if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, 800, 600, filepath, cameraInfo))
             {
                 pHCLuminateBridge->syncScene(aMeshProps, cameraInfo);
                 pHCLuminateBridge->draw();

@@ -10,8 +10,8 @@
 #include <REDIWindow.h>
 
 #include "ConversionTools.h"
-//#include <hoops_luminate_bridge/AxisTriad.h>
-//#include "LightingEnvironment.h"
+#include "AxisTriad.h"
+#include "LightingEnvironment.h"
 #include "ExProcess.h"
 
 namespace HC_luminate_bridge {
@@ -107,7 +107,8 @@ namespace HC_luminate_bridge {
 		RED::Object* m_auxvrl;
 		
 		// Camera.
-		RED::Object* m_auxcamera;
+		RED::Object* m_camera;
+		bool m_bSyncCamera;
 
 		// Scene.
 		LuminateSceneInfoPtr m_conversionDataPtr;
@@ -118,12 +119,19 @@ namespace HC_luminate_bridge {
 		FrameStatistics m_lastFrameStatistics;
 		RED::FRAME_TRACING_FEEDBACK m_frameTracingMode;
 
+		// Axis triad.
+		AxisTriad m_axisTriad;
+
 		// Lighting environment.
 		// Only one of the two can be active at same time.
 		LightingModel m_lightingModel;
-		//DefaultLightingModel m_defaultLightingModel;
-		//PhysicalSunSkyLightingModel m_sunSkyLightingModel;
-		//EnvironmentMapLightingModel m_environmentMapLightingModel;
+		DefaultLightingModel m_defaultLightingModel;
+		PhysicalSunSkyLightingModel m_sunSkyLightingModel;
+		EnvironmentMapLightingModel m_environmentMapLightingModel;
+
+		// segment update
+		bool m_selectedSegmentTransformIsDirty;
+		bool m_rootTransformIsDirty;
 
 		// Static Fields:
 		// --------------
@@ -149,6 +157,11 @@ namespace HC_luminate_bridge {
 		bool draw();
 
 		/**
+		 * Requests to start a fresh new frame.
+		 */
+		void resetFrame();
+
+		/**
 		 * Synchronize Luminate scene with the current 3DF/HPS scene.
 		 * The previous scene will be destroyed.
 		 * @return True if success, otherwise False.
@@ -170,7 +183,8 @@ namespace HC_luminate_bridge {
 		 */
 		bool resize(int a_windowWidth, int a_windowHeight);
 
-		bool initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight, CameraInfo a_cameraInfo);
+		bool initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight,
+			std::string const& a_environmentMapFilepath, CameraInfo a_cameraInfo);
 
 		/**
 		 * Get rendering progress.
@@ -178,9 +192,28 @@ namespace HC_luminate_bridge {
 		 */
 		FrameStatistics getFrameStatistics();
 
+		/**
+		 * Sets current lighting environment as a default model.
+		 */
+		RED_RC setDefaultLightEnvironment();
+
+		/**
+		 * Sets current lighting environment as environment map.
+		 * @param[in] a_imageFilepath Filepath of the env map file to use.
+		 * @param[in] a_showImage Whether to show the image, if not it will only act as sky light.
+		 * @param[in] a_backgroundColor Background color to show if the image is not shown.
+		 */
+		RED_RC
+			setEnvMapLightEnvironment(std::string const& a_imageFilepath, bool a_showImage, RED::Color const& a_backgroundColor);
+
 		CameraInfo creteCameraInfo(double* a_target, double* a_up, double* a_position, int a_projection, double a_width, double a_height);
 		bool saveImg();
 	private:
+		/**
+		 * Removes the current lighting environment from the scene.
+		 */
+		RED_RC removeCurrentLightingEnvironment();
+
 		static RED_RC createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera);
 
 		/**

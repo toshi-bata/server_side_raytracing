@@ -102,9 +102,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;OFFSCREEN_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Debug-static;$(HEXCHANGE_INSTALL_DIR)\include;$(HEXCHANGE_INSTALL_DIR)\samples\exchange\exchangesource\Collision\visitor;$(HLUMINATE_INSTALL_DIR)\Redsdk.m\Public;$(HLUMINATE_INSTALL_DIR)\Tools.m\Public</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Debug-static;$(HEXCHANGE_INSTALL_DIR)\include;$(HLUMINATE_INSTALL_DIR)\Redsdk.m\Public;$(HLUMINATE_INSTALL_DIR)\Tools.m\Public</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
     </ClCompile>
@@ -139,30 +139,34 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;OFFSCREEN_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HEXCHANGE_INSTALL_DIR)/include;$(HEXCHANGE_INSTALL_DIR)\samples\exchange\exchangesource\Collision\visitor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HEXCHANGE_INSTALL_DIR)/include;$(HLUMINATE_INSTALL_DIR)\Redsdk.m\Public;$(HLUMINATE_INSTALL_DIR)\Tools.m\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\lib\win64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libmicrohttpd.lib;libconverter.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\lib\win64;$(HLUMINATE_INSTALL_DIR)\Redsdk.m\Lib\Win64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libmicrohttpd.lib;libconverter.lib;REDCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AxisTriad.cpp" />
     <ClCompile Include="ConversionTools.cpp" />
     <ClCompile Include="ExProcess.cpp" />
     <ClCompile Include="HCLuminateBridge.cpp" />
+    <ClCompile Include="LightingEnvironment.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AxisTriad.h" />
     <ClInclude Include="ConversionTools.h" />
     <ClInclude Include="ExProcess.h" />
     <ClInclude Include="HCLuminateBridge.h" />
+    <ClInclude Include="LightingEnvironment.h" />
     <ClInclude Include="utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
