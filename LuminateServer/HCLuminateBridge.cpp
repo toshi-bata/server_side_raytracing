@@ -579,7 +579,7 @@ namespace HC_luminate_bridge {
             std::string textureName;
 
             // Determine diffuse color.
-            materialInfo.colorsByChannel[ColorChannels::DiffuseColor] = RED::Color(float(meshProps.color.m_dRed), float(meshProps.color.m_dBlue), float(meshProps.color.m_dGreen), 1.f);
+            materialInfo.colorsByChannel[ColorChannels::DiffuseColor] = RED::Color(float(meshProps.color.m_dRed), float(meshProps.color.m_dGreen), float(meshProps.color.m_dBlue), 1.f);
             textureName = "";
 
             // Determine transmission color.
