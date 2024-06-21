@@ -600,8 +600,9 @@ answer_to_connection(void* cls,
                 floatArr.push_back(statistics.renderingProgress);
                 floatArr.push_back(statistics.remainingTimeMilliseconds);
 
-                if (100 <= statistics.renderingProgress * 100)
-                    pHCLuminateBridge->saveImg();
+                char filePath[FILENAME_MAX];
+                sprintf(filePath, "C:\\git\\toshi-bata\\server_side_raytracing\\%s.png", con_info->sessionId);
+                pHCLuminateBridge->saveImg(filePath);
 
                 con_info->answerstring = response_success;
                 con_info->answercode = MHD_HTTP_OK;

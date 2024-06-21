@@ -394,14 +394,14 @@ namespace HC_luminate_bridge {
         return cameraInfo;
     }
 
-    bool HCLuminateBridge::saveImg()
+    bool HCLuminateBridge::saveImg(const char* filePath)
     {
         RED_RC rc;
 #ifndef _DEBUG
         RED::IViewpointRenderList* defaultVRL = m_auxvrl->As<RED::IViewpointRenderList>();
         RED::Object* renderimg = defaultVRL->GetRenderImage();
 
-        rc = RED::ImageTools::Save(renderimg, false, "C:\\temp\\my_image.png", false, true, 1.0);
+        rc = RED::ImageTools::Save(renderimg, false, filePath, false, true, 1.0);
 #endif
         return true;
     }

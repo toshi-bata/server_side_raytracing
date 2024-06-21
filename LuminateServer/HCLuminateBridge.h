@@ -208,7 +208,7 @@ namespace HC_luminate_bridge {
 			setEnvMapLightEnvironment(std::string const& a_imageFilepath, bool a_showImage, RED::Color const& a_backgroundColor);
 
 		CameraInfo creteCameraInfo(double* a_target, double* a_up, double* a_position, int a_projection, double a_width, double a_height);
-		bool saveImg();
+		bool saveImg(const char* filePath);
 	private:
 		/**
 		 * Removes the current lighting environment from the scene.

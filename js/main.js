@@ -43,8 +43,9 @@ class Main {
 
             this._viewer.setCallbacks({
                 sceneReady: () => {
-                    this._viewer.view.setBackgroundColor(new Communicator.Color(255, 255, 255), new Communicator.Color(230, 204, 179));
+                    this._viewer.view.setBackgroundColor(new Communicator.Color(255, 255, 255), new Communicator.Color(255, 255, 255));
                     this._viewer.view.axisTriad.enable(true);
+                    this._viewer.view.axisTriad.setAnchor(Communicator.OverlayAnchor.LowerRightCorner);
                     this._viewer.view.setProjectionMode(Communicator.Projection.Perspective);
                     this._viewer.view.setViewOrientation(Communicator.ViewOrientation.Iso);
                 },
@@ -127,6 +128,27 @@ class Main {
         $('#sewingTol').val(0.01);
         $('#classifyTol').val(0.0001);
 
+        $("#PreviewDlg").dialog({
+            autoOpen: false,
+            height: 600,
+            width: 800,
+            modal: false,
+            title: "Raytracing",
+            closeOnEscape: true,
+            position: {my: "center", at: "left top", of: window},
+            close: () => { this._clearRaytracing(); }
+        });
+
+        $("#previewPg").progressbar({
+            value: 0,
+            change: () => {
+              $("#previewPgTxt").text($("#previewPg").progressbar("value").toFixed(1) + "%");
+            },
+            complete: function() {
+              $("#wkTepreviewPgTxtt").text($("#previewPg").progressbar("value").toFixed(1) + "% completed");
+            }
+          });
+
         // Simple command
         $(".toolbarBtn").on("click", (e) => {
             let command = $(e.currentTarget).data("command");
@@ -186,7 +208,14 @@ class Main {
     }
 
     _invokeRaytracing(command) {   
-        if (null == this._timerId) {     
+        if (null == this._timerId) {   
+            // Init preview dialog 
+            $('#previewImg').attr('src', 'css/images/spinner.gif');
+            $('#previewImg').attr('width', 'width:auto');
+            $("#previewPg").progressbar("value", 0);
+
+            $('#PreviewDlg').dialog('open');
+
             const camera = this._viewer.view.getCamera();
             const target = camera.getTarget();
             const up = camera.getUp();
@@ -210,10 +239,20 @@ class Main {
                             const renderingProgress = arr[1] * 100;
                             const remainingTimeMilliseconds = arr[2];
                             $("#progressInfo").html("Progress: " + Math.round(renderingProgress));
+                            const now = new Date().getTime();
+                            $('#previewImg').attr('src', this._sessionId + '.png?' + now);
+
+                            $('#previewImg').attr('width', '100%');
+                            $('#previewImg').attr('height', 'auto');
+                            
+                            $('#previewImg').attr('z-index', '0');
+                            $('#previewPg').attr('z-index', '1');
+                            $('#previewPgTxt').attr('z-index', '1');
+                            
+                            $("#previewPg").progressbar("value", renderingProgress);
 
                             if (100 <= renderingProgress) {
-                                clearInterval(this._timerId);
-                                $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
+                                this._clearRaytracing();
                             }
                         }
                     });
@@ -221,9 +260,14 @@ class Main {
             });
         }
         else {
-            clearInterval(this._timerId);
-            this._timerId = null;
-            $("#progressInfo").html("");
+            this._clearRaytracing();
         }
+    }
+
+    _clearRaytracing() {
+        clearInterval(this._timerId);
+        this._timerId = null;
+        $("#progressInfo").html("");
+        $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
     }
 }
