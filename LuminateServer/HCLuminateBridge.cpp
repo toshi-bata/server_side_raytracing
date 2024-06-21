@@ -40,22 +40,24 @@ namespace HC_luminate_bridge {
     bool HCLuminateBridge::initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight,
         std::string const& a_environmentMapFilepath, CameraInfo a_cameraInfo)
     {
+        RED_RC rc;
+
         //////////////////////////////////////////
         // Assign Luminate license.
         //////////////////////////////////////////
 
-        bool licenseIsActive;
-        RED_RC rc = setLicense(a_license.c_str(), licenseIsActive);
-        if (rc != RED_OK || !licenseIsActive)
-            return false;
+        //bool licenseIsActive;
+        //rc = setLicense(a_license.c_str(), licenseIsActive);
+        //if (rc != RED_OK || !licenseIsActive)
+        //    return false;
 
         //////////////////////////////////////////
         // Select Luminate rendering mode.
         //////////////////////////////////////////
 
-        rc = setSoftTracerMode(1);
-        if (rc != RED_OK)
-            return false;
+        //rc = setSoftTracerMode(1);
+        //if (rc != RED_OK)
+        //    return false;
 
         //////////////////////////////////////////
         // Retrieve the resource manager from singleton
@@ -774,7 +776,9 @@ namespace HC_luminate_bridge {
         RC_TEST(ilicense->SetLicense(a_license));
         RC_TEST(ilicense->IsProductActivated(a_outLicenseIsActive, RED::PROD_REDSDK));
 
-        return RED_OK;
+        RED_RC rc = setSoftTracerMode(1);
+
+        return rc;
     }
 
     RED_RC setSoftTracerMode(int a_softTracerMode)

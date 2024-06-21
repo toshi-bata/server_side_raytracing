@@ -51,7 +51,7 @@ enum ConnectionType
 
 static unsigned int nr_of_uploading_clients = 0;
 static ExProcess *pExProcess;
-static HCLuminateBridge* pHCLuminateBridge;
+static std::map<std::string, HCLuminateBridge*> m_mpLuminateBridge;
 HWND hWnd;
 
 /**
@@ -554,18 +554,21 @@ answer_to_connection(void* cls,
 
             std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
 
-            if (NULL != pHCLuminateBridge)
+            if (0 < m_mpLuminateBridge.count(con_info->sessionId))
             {
-                pHCLuminateBridge->shutdown();
-                delete pHCLuminateBridge;
+                m_mpLuminateBridge[con_info->sessionId]->shutdown();
+                delete m_mpLuminateBridge[con_info->sessionId];
+
+                m_mpLuminateBridge.erase(con_info->sessionId);
             }
 
-            pHCLuminateBridge = new HCLuminateBridge();
+            HCLuminateBridge* pHCLuminateBridge = new HCLuminateBridge();
+            m_mpLuminateBridge[con_info->sessionId] = pHCLuminateBridge;
 
             CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, width, height);
 
             std::string filepath = "";
-            if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, 800, 600, filepath, cameraInfo))
+            if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, 600, 400, filepath, cameraInfo))
             {
                 pHCLuminateBridge->syncScene(aMeshProps, cameraInfo);
                 pHCLuminateBridge->draw();
@@ -578,21 +581,31 @@ answer_to_connection(void* cls,
         }
         else if (0 == strcmp(url, "/Draw"))
         {
-            pHCLuminateBridge->draw();
-
-            FrameStatistics statistics = pHCLuminateBridge->getFrameStatistics();
-
             std::vector<float> floatArr;
-            floatArr.push_back(statistics.renderingIsDone);
-            floatArr.push_back(statistics.renderingProgress);
-            floatArr.push_back(statistics.remainingTimeMilliseconds);
+            
+            if (0 == m_mpLuminateBridge.count(con_info->sessionId))
+            {
+                con_info->answerstring = response_error;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+            else
+            {
+                HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
 
-            if (20 <= statistics.renderingProgress * 100)
-                pHCLuminateBridge->saveImg();
+                pHCLuminateBridge->draw();
 
-            con_info->answerstring = response_success;
-            con_info->answercode = MHD_HTTP_OK;
+                FrameStatistics statistics = pHCLuminateBridge->getFrameStatistics();
 
+                floatArr.push_back(statistics.renderingIsDone);
+                floatArr.push_back(statistics.renderingProgress);
+                floatArr.push_back(statistics.remainingTimeMilliseconds);
+
+                if (100 <= statistics.renderingProgress * 100)
+                    pHCLuminateBridge->saveImg();
+
+                con_info->answerstring = response_success;
+                con_info->answercode = MHD_HTTP_OK;
+            }
             return sendResponseFloatArr(connection, floatArr);
         }
     }
@@ -671,6 +684,12 @@ main(int argc, char** argv)
     printf("HOOPS Exchange Loaded.\n");
 
     hWnd = GetConsoleHwnd();
+
+    bool licenseIsActive;
+    RED_RC rc = setLicense(HOOPS_LICENSE, licenseIsActive);
+    if (rc != RED_OK || !licenseIsActive)
+        return false;
+    printf("HOOPS Luminate Initialized.\n");
 
     struct MHD_Daemon* daemon;
 

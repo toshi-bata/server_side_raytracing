@@ -211,7 +211,7 @@ class Main {
                             const remainingTimeMilliseconds = arr[2];
                             $("#progressInfo").html("Progress: " + Math.round(renderingProgress));
 
-                            if (20 <= renderingProgress) {
+                            if (100 <= renderingProgress) {
                                 clearInterval(this._timerId);
                                 $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
                             }
