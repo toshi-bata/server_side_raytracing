@@ -13,6 +13,7 @@ class Main {
             "1000.0": "m"
         };
         this._timerId;
+        this._isBusy;
     }
 
     start (port, viewerMode, modelName, reverseProxy) {
@@ -35,6 +36,7 @@ class Main {
         this._serverCaller = new ServerCaller(psServerURL, this._sessionId);
 
         this._timerId = null;
+        this._isBusy = false;
     }
 
     _createViewer(viewerMode, modelName) {
@@ -43,11 +45,9 @@ class Main {
 
             this._viewer.setCallbacks({
                 sceneReady: () => {
-                    this._viewer.view.setBackgroundColor(new Communicator.Color(255, 255, 255), new Communicator.Color(255, 255, 255));
+                    this._viewer.view.setBackgroundColor(null, null);
                     this._viewer.view.axisTriad.enable(true);
                     this._viewer.view.axisTriad.setAnchor(Communicator.OverlayAnchor.LowerRightCorner);
-                    this._viewer.view.setProjectionMode(Communicator.Projection.Perspective);
-                    this._viewer.view.setViewOrientation(Communicator.ViewOrientation.Iso);
                 },
                 timeout: () => {
                     this._serverCaller.CallServerPost("Clear");
@@ -128,24 +128,13 @@ class Main {
         $('#sewingTol').val(0.01);
         $('#classifyTol').val(0.0001);
 
-        $("#PreviewDlg").dialog({
-            autoOpen: false,
-            height: 600,
-            width: 800,
-            modal: false,
-            title: "Raytracing",
-            closeOnEscape: true,
-            position: {my: "center", at: "left top", of: window},
-            close: () => { this._clearRaytracing(); }
-        });
-
-        $("#previewPg").progressbar({
+        $("#progressBar").progressbar({
             value: 0,
             change: () => {
-              $("#previewPgTxt").text($("#previewPg").progressbar("value").toFixed(1) + "%");
+              $("#progressTxt").text($("#progressBar").progressbar("value").toFixed(1) + "%");
             },
             complete: function() {
-              $("#wkTepreviewPgTxtt").text($("#previewPg").progressbar("value").toFixed(1) + "% completed");
+              $("#progressTxt").text($("#progressBar").progressbar("value").toFixed(1) + "% completed");
             }
           });
 
@@ -200,6 +189,9 @@ class Main {
                     $("#dataInfo").html(partProps);
 
                     this._viewer.model.switchToModel(this._sessionId + "/" + scModelName).then((nodes) => {
+                        const camera = this._viewer.view.getCamera();
+                        camera.setProjection(Communicator.Projection.Perspective);
+                        this._viewer.view.setCamera(camera);
                         $("#loadingImage").hide();
                     });
                 });
@@ -209,53 +201,67 @@ class Main {
 
     _invokeRaytracing(command) {   
         if (null == this._timerId) {   
-            // Init preview dialog 
-            $('#previewImg').attr('src', 'css/images/spinner.gif');
-            $('#previewImg').attr('width', 'width:auto');
-            $("#previewPg").progressbar("value", 0);
+            $("#loadingImage").show();
 
-            $('#PreviewDlg').dialog('open');
+            const size = this._viewer.view.getCanvasSize();
+            const width = size.x;
+            const height = size.y;
 
             const camera = this._viewer.view.getCamera();
             const target = camera.getTarget();
             const up = camera.getUp();
             const position = camera.getPosition();
             const projection = camera.getProjection();
-            const width = camera.getWidth();
-            const height = camera.getHeight();
+            const cameraW = camera.getWidth();
+            const cameraH = camera.getHeight();
             const params = {
+                width: width,
+                height: height,
                 target: [target.x, target.y, target.z],
                 up: [up.x, up.y, up.z],
                 position: [position.x, position.y, position.z],
                 projection: projection,
-                width: width,
-                height: height
+                cameraW: cameraW,
+                cameraH: cameraH
             };
             this._serverCaller.CallServerPost(command, params).then(() => {
+                $("#loadingImage").hide();
+
+                $("#progressBar").progressbar("value", 0);
+                $('#progress').show();
+                
                 this._timerId = setInterval(() => {
-                    this._serverCaller.CallServerPost("Draw", "{}", "FLOAT").then((arr) => {
-                        if (arr.length) {
-                            const renderingIsDone = arr[0];
-                            const renderingProgress = arr[1] * 100;
-                            const remainingTimeMilliseconds = arr[2];
-                            $("#progressInfo").html("Progress: " + Math.round(renderingProgress));
-                            const now = new Date().getTime();
-                            $('#previewImg').attr('src', this._sessionId + '.png?' + now);
+                    if (false == this._isBusy) {
+                        this._isBusy = true;
+                        this._serverCaller.CallServerPost("Draw", "{}", "FLOAT").then((arr) => {
+                            this._isBusy = false;
+                            if (arr.length) {
+                                const renderingIsDone = arr[0];
+                                const renderingProgress = arr[1] * 100;
+                                const remainingTimeMilliseconds = arr[2];
+                                const now = new Date().getTime();
+                                $('#backgroundImg').attr('src', this._sessionId + '.png?' + now);
 
-                            $('#previewImg').attr('width', '100%');
-                            $('#previewImg').attr('height', 'auto');
-                            
-                            $('#previewImg').attr('z-index', '0');
-                            $('#previewPg').attr('z-index', '1');
-                            $('#previewPgTxt').attr('z-index', '1');
-                            
-                            $("#previewPg").progressbar("value", renderingProgress);
+                                $("#progressBar").progressbar("value", renderingProgress);
 
-                            if (100 <= renderingProgress) {
-                                this._clearRaytracing();
+                                const root = this._viewer.model.getAbsoluteRootNode();
+                                const ratio = 5;
+                                if (ratio >= renderingProgress) {
+                                    const opacity = (ratio - renderingProgress) / ratio;
+                                    this._viewer.model.setNodesOpacity([root], opacity);
+                                }
+                                else {
+                                    this._viewer.model.setNodesOpacity([root], 0);
+                                }
+
+                                if (100 <= renderingProgress) {
+                                    this._clearRaytracing();
+                                    $('#progress').hide();
+                                    $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }, 200);
             });
         }
@@ -267,7 +273,8 @@ class Main {
     _clearRaytracing() {
         clearInterval(this._timerId);
         this._timerId = null;
+        this._isBusy = false;
         $("#progressInfo").html("");
-        $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
+        $("#loadingImage").hide();
     }
 }

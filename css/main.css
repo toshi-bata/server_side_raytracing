@@ -42,3 +42,6 @@ table td {
 .table_text_r {
     text-align: right;
 }
+body {
+    overflow: hidden;
+}

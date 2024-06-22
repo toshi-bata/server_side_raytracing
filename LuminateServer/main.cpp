@@ -540,6 +540,10 @@ answer_to_connection(void* cls,
         }
         else if (0 == strcmp(url, "/Raytracing"))
         {
+            double width, height;
+            if (!paramStrToDbl("width", width));
+            if (!paramStrToDbl("height", height));
+
             double *target, *up, *position;
             if (!paramStrToXYZ("target", target)) return MHD_NO;
             if (!paramStrToXYZ("up", up)) return MHD_NO;
@@ -548,9 +552,9 @@ answer_to_connection(void* cls,
             int projection;
             if (!paramStrToInt("projection", projection));
 
-            double width, height;
-            if (!paramStrToDbl("width", width));
-            if (!paramStrToDbl("height", height));
+            double cameraW, cameraH;
+            if (!paramStrToDbl("cameraW", cameraW));
+            if (!paramStrToDbl("cameraH", cameraH));
 
             std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
 
@@ -565,10 +569,10 @@ answer_to_connection(void* cls,
             HCLuminateBridge* pHCLuminateBridge = new HCLuminateBridge();
             m_mpLuminateBridge[con_info->sessionId] = pHCLuminateBridge;
 
-            CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, width, height);
+            CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
             std::string filepath = "";
-            if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, 600, 400, filepath, cameraInfo))
+            if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, width, height, filepath, cameraInfo))
             {
                 pHCLuminateBridge->syncScene(aMeshProps, cameraInfo);
                 pHCLuminateBridge->draw();

@@ -150,9 +150,11 @@ namespace HC_luminate_bridge {
         // Initialize an axis triad to be displayed
         //////////////////////////////////////////
 
+#ifdef _DEBUG
         rc = createAxisTriad(m_window, m_iVRL, m_axisTriad);
         if (rc != RED_OK)
             return false;
+#endif
 
         //////////////////////////////////////////
         // Synchronize HC and Luminate cameras for
@@ -414,8 +416,9 @@ namespace HC_luminate_bridge {
             m_conversionDataPtr != nullptr ? m_conversionDataPtr->viewHandedness : Handedness::RightHanded;
 
         rc = syncCameras(m_camera, viewHandedness, m_windowWidth, m_windowHeight, a_cameraInfo);
+#ifdef _DEBUG
         rc = synchronizeAxisTriadWithCamera(m_axisTriad, m_camera);
-
+#endif
         m_newFrameIsRequired = true;
 
         return rc;
@@ -1150,7 +1153,7 @@ namespace HC_luminate_bridge {
             RED::IWindow* iwindow = a_window->As<RED::IWindow>();
 
             RED::FrameStatistics fstats = iwindow->GetFrameStatistics();
-            const RED::ViewpointStatistics& camstats = fstats.GetViewpointStatistics(a_num_vrl, 1);
+            const RED::ViewpointStatistics& camstats = fstats.GetViewpointStatistics(a_num_vrl, 0);
 
             a_stats->renderingProgress = camstats.GetSoftwarePassProgress();
             a_stats->remainingTimeMilliseconds = camstats.GetSoftwareRemainingTime();

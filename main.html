@@ -21,7 +21,7 @@
 
         <link rel="stylesheet" href="css/main.css">
         <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
-       
+
         <script type="text/javascript">
             var main;
             var callbacks;
@@ -54,6 +54,7 @@
     </head>
     <body>
         <div id="container"></div>
+        <input id="backgroundImg" type="image" src="css/images/default_background.png" >
         <div id="toolbarGr">
             <input title="Upload 3D CAD file" class="toolbarBtn" data-command="Upload" type="image" name="image_button" src="css/images/upload.png" style="margin-right: 10px;" />
             <input title="Raytracing" class="toolbarBtn toggleBtn" data-command="Raytracing" type="image" name="image_button" src="css/images/raytracing.png" />
@@ -88,13 +89,10 @@
             </div>
         </form>
 
-        <form id="PreviewDlg" style="display:none;">
-            <input id="previewImg" class="centerBlock" type="image" src="css/images/spinner.gif">
-            <div class="centerBotomBlock">
-                <div id="previewPgTxt" style="bottom:10px;"></div>
-                <div id="previewPg"></div>
-            </div>
-        </form>
+        <div id="progress" class="centerBotomBlock" style="display:none;">
+            <div id="progressTxt" style="bottom:10px;"></div>
+            <div id="progressBar"></div>
+        </div>
 
         <img id="loadingImage" style="display: none;" src="css/images/spinner.gif" class="centerBlock" />
     </body>
