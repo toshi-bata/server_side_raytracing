@@ -110,6 +110,7 @@ namespace HC_luminate_bridge {
 		// Camera.
 		RED::Object* m_camera;
 		bool m_bSyncCamera;
+		CameraInfo m_cameraInfo;
 
 		// Scene.
 		LuminateSceneInfoPtr m_conversionDataPtr;
@@ -206,6 +207,12 @@ namespace HC_luminate_bridge {
 		 */
 		RED_RC
 			setEnvMapLightEnvironment(std::string const& a_imageFilepath, bool a_showImage, RED::Color const& a_backgroundColor);
+
+		/**
+		* Set sync camera.
+		* @param[in] a_sync Whether to synchronize cametra between HPS and Luminate.
+		 */
+		void setSyncCamera(const bool a_sync, CameraInfo a_cameraInfo) { m_bSyncCamera = a_sync; m_cameraInfo = a_cameraInfo; }
 
 		CameraInfo creteCameraInfo(double* a_target, double* a_up, double* a_position, int a_projection, double a_width, double a_height);
 		bool saveImg(const char* filePath);

@@ -14,11 +14,14 @@ class Main {
         };
         this._timerId;
         this._isBusy;
+        this._prevCamera;
     }
 
     start (port, viewerMode, modelName, reverseProxy) {
         this._port = port;
         this._reverseProxy = reverseProxy;
+        this._timerId = null;
+        this._isBusy = false;
         this._requestServerProcess();
         this._createViewer(viewerMode, modelName);
         this._initEvents();
@@ -34,9 +37,6 @@ class Main {
         }
 
         this._serverCaller = new ServerCaller(psServerURL, this._sessionId);
-
-        this._timerId = null;
-        this._isBusy = false;
     }
 
     _createViewer(viewerMode, modelName) {
@@ -48,6 +48,28 @@ class Main {
                     this._viewer.view.setBackgroundColor(null, null);
                     this._viewer.view.axisTriad.enable(true);
                     this._viewer.view.axisTriad.setAnchor(Communicator.OverlayAnchor.LowerRightCorner);
+                },
+                camera: (camera) => {
+                    const root = this._viewer.model.getAbsoluteRootNode();
+                    this._viewer.model.resetNodesOpacity([root]);
+                    $('#backgroundImg').attr('src', 'css/images/default_background.png');
+                    $('#progress').hide();
+
+                    let isOn = $('[data-command="Raytracing"]').data("on");
+                    if (isOn) {
+                        this._clearRaytracing();
+                        this._prevCamera = camera;
+
+                        setTimeout(() => {
+                            if (camera.equals(this._prevCamera)) {
+                                const params = this._getRenderingParams();
+                                this._serverCaller.CallServerPost("SyncCamera", params).then(() => {
+                                    $("#progressBar").progressbar("value", 0);
+                                    this._invokeDraw();
+                                });
+                            }
+                          }, "1000");
+                    }
                 },
                 timeout: () => {
                     this._serverCaller.CallServerPost("Clear");
@@ -244,43 +266,7 @@ class Main {
 
             this._serverCaller.CallServerPost(command, params).then(() => {
                 $("#loadingImage").hide();
-
-                $("#progressBar").progressbar("value", 0);
-                $('#progress').show();
-                
-                this._timerId = setInterval(() => {
-                    if (false == this._isBusy) {
-                        this._isBusy = true;
-                        this._serverCaller.CallServerPost("Draw", "{}", "FLOAT").then((arr) => {
-                            this._isBusy = false;
-                            if (arr.length) {
-                                const renderingIsDone = arr[0];
-                                const renderingProgress = arr[1] * 100;
-                                const remainingTimeMilliseconds = arr[2];
-                                const now = new Date().getTime();
-                                $('#backgroundImg').attr('src', this._sessionId + '.png?' + now);
-
-                                $("#progressBar").progressbar("value", renderingProgress);
-
-                                const root = this._viewer.model.getAbsoluteRootNode();
-                                const ratio = 5;
-                                if (ratio >= renderingProgress) {
-                                    const opacity = (ratio - renderingProgress) / ratio;
-                                    this._viewer.model.setNodesOpacity([root], opacity);
-                                }
-                                else {
-                                    this._viewer.model.setNodesOpacity([root], 0);
-                                }
-
-                                if (100 <= renderingProgress) {
-                                    this._clearRaytracing();
-                                    $('#progress').hide();
-                                    $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
-                                }
-                            }
-                        });
-                    }
-                }, 200);
+                this._invokeDraw();
             });
         }
         else {
@@ -288,11 +274,51 @@ class Main {
         }
     }
 
+    _invokeDraw() {
+        $("#progressBar").progressbar("value", 0);
+        $('#progress').show();
+
+        this._timerId = setInterval(() => {
+            if (false == this._isBusy) {
+                this._isBusy = true;
+                this._serverCaller.CallServerPost("Draw", "{}", "FLOAT").then((arr) => {
+                    this._isBusy = false;
+                    if (arr.length && null != this._timerId) {
+                        const renderingIsDone = arr[0];
+                        const renderingProgress = arr[1] * 100;
+                        const remainingTimeMilliseconds = arr[2];
+                        const now = new Date().getTime();
+                        $('#backgroundImg').attr('src', this._sessionId + '.png?' + now);
+
+                        $("#progressBar").progressbar("value", renderingProgress);
+
+                        const root = this._viewer.model.getAbsoluteRootNode();
+                        const ratio = 5;
+                        if (ratio >= renderingProgress) {
+                            const opacity = (ratio - renderingProgress) / ratio;
+                            this._viewer.model.setNodesOpacity([root], opacity);
+                        }
+                        else {
+                            this._viewer.model.setNodesOpacity([root], 0);
+                        }
+
+                        if (100 <= renderingProgress) {
+                            this._clearRaytracing();
+                            $('#progress').hide();
+                            $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
+                        }
+                    }
+                });
+            }
+        }, 200);
+    }
+
     _clearRaytracing() {
-        clearInterval(this._timerId);
-        this._timerId = null;
-        this._isBusy = false;
-        $("#progressInfo").html("");
-        $("#loadingImage").hide();
+        if (null != this._timerId) {
+            clearInterval(this._timerId);
+            this._timerId = null;
+            this._isBusy = false;
+            $("#loadingImage").hide();
+        }
     }
 }

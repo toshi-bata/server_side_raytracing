@@ -619,10 +619,11 @@ answer_to_connection(void* cls,
                 CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
                 pHCLuminateBridge->syncScene(aMeshProps, cameraInfo);
+
+                con_info->answerstring = response_success;
+                con_info->answercode = MHD_HTTP_OK;
             }
 
-            con_info->answerstring = response_success;
-            con_info->answercode = MHD_HTTP_OK;
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
         else if (0 == strcmp(url, "/Draw"))
@@ -654,6 +655,39 @@ answer_to_connection(void* cls,
                 con_info->answercode = MHD_HTTP_OK;
             }
             return sendResponseFloatArr(connection, floatArr);
+        }
+        else if (0 == strcmp(url, "/SyncCamera"))
+        {
+            if (0 == m_mpLuminateBridge.count(con_info->sessionId))
+            {
+                con_info->answerstring = response_error;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+            else
+            {
+                HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
+                
+                double* target, * up, * position;
+                if (!paramStrToXYZ("target", target)) return MHD_NO;
+                if (!paramStrToXYZ("up", up)) return MHD_NO;
+                if (!paramStrToXYZ("position", position)) return MHD_NO;
+
+                int projection;
+                if (!paramStrToInt("projection", projection));
+
+                double cameraW, cameraH;
+                if (!paramStrToDbl("cameraW", cameraW));
+                if (!paramStrToDbl("cameraH", cameraH));
+
+                CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
+
+                pHCLuminateBridge->setSyncCamera(true, cameraInfo);
+
+                con_info->answerstring = response_success;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
     }
 

@@ -239,6 +239,8 @@ namespace HC_luminate_bridge {
 
     bool HCLuminateBridge::draw()
     {
+        RED_RC rc;
+
         // update segments if necessary
         //if (m_selectedSegmentTransformIsDirty) {
         //    updateSelectedSegmentTransform();
@@ -249,10 +251,13 @@ namespace HC_luminate_bridge {
         //    syncRootTransform();
         //}
 
-        //if (m_bSyncCamera)
-        //    checkCameraSync();
+        if (m_bSyncCamera)
+        {
+            rc = syncLuminateCamera(m_cameraInfo);
+            m_bSyncCamera = false;
+        }
 
-        RED_RC rc = checkDrawTracing(m_window, m_frameTracingMode, m_frameIsComplete, m_newFrameIsRequired);
+        rc = checkDrawTracing(m_window, m_frameTracingMode, m_frameIsComplete, m_newFrameIsRequired);
         //RED_RC rc = checkDrawHardware(m_window);
 
         checkFrameStatistics(m_window, m_iVRL, &m_lastFrameStatistics, m_frameIsComplete);
