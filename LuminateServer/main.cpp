@@ -54,6 +54,44 @@ static ExProcess *pExProcess;
 static std::map<std::string, HCLuminateBridge*> m_mpLuminateBridge;
 HWND hWnd;
 
+HWND GetConsoleHwnd()
+{
+#define MY_BUFSIZE 1024 // Buffer size for console window titles.
+    HWND hwndFound;         // This is what is returned to the caller.
+    wchar_t pszNewWindowTitle[MY_BUFSIZE]; // Contains fabricated
+                                        // WindowTitle.
+    wchar_t pszOldWindowTitle[MY_BUFSIZE]; // Contains original
+                                        // WindowTitle.
+
+    // Fetch current window title.
+
+    GetConsoleTitle(pszOldWindowTitle, MY_BUFSIZE);
+
+    // Format a "unique" NewWindowTitle.
+
+    wsprintf(pszNewWindowTitle, L"%d/%d",
+        GetTickCount(),
+        GetCurrentProcessId());
+
+    // Change current window title.
+
+    SetConsoleTitle(pszNewWindowTitle);
+
+    // Ensure window title has been updated.
+
+    Sleep(40);
+
+    // Look for NewWindowTitle.
+
+    hwndFound = FindWindow(NULL, pszNewWindowTitle);
+
+    // Restore original window title.
+
+    SetConsoleTitle(pszOldWindowTitle);
+
+    return(hwndFound);
+}
+
 /**
  * Information we keep per connection.
  */
@@ -547,7 +585,7 @@ answer_to_connection(void* cls,
                 return sendResponseFloatArr(connection, floatArr);
             }
         }
-        else if (0 == strcmp(url, "/PrepareRendering"))
+        else if (0 == strcmp(url, "/InitLuminate"))
         {
             double width, height;
             if (!paramStrToDbl("width", width));
@@ -578,9 +616,13 @@ answer_to_connection(void* cls,
 
             CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
+            hWnd = GetConsoleHwnd();
             std::string filepath = "";
             if (pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, width, height, filepath, cameraInfo))
+            {
+                printf("HOOPS Luminate initialized.\n");
                 pHCLuminateBridge->draw();
+            }
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
@@ -660,44 +702,6 @@ answer_to_connection(void* cls,
     return MHD_NO;
 }
 
-HWND GetConsoleHwnd()
-{
-#define MY_BUFSIZE 1024 // Buffer size for console window titles.
-    HWND hwndFound;         // This is what is returned to the caller.
-    wchar_t pszNewWindowTitle[MY_BUFSIZE]; // Contains fabricated
-                                        // WindowTitle.
-    wchar_t pszOldWindowTitle[MY_BUFSIZE]; // Contains original
-                                        // WindowTitle.
-
-    // Fetch current window title.
-
-    GetConsoleTitle(pszOldWindowTitle, MY_BUFSIZE);
-
-    // Format a "unique" NewWindowTitle.
-
-    wsprintf(pszNewWindowTitle, L"%d/%d",
-        GetTickCount(),
-        GetCurrentProcessId());
-
-    // Change current window title.
-
-    SetConsoleTitle(pszNewWindowTitle);
-
-    // Ensure window title has been updated.
-
-    Sleep(40);
-
-    // Look for NewWindowTitle.
-
-    hwndFound = FindWindow(NULL, pszNewWindowTitle);
-
-    // Restore original window title.
-
-    SetConsoleTitle(pszOldWindowTitle);
-
-    return(hwndFound);
-}
-
 int
 main(int argc, char** argv)
 {
@@ -729,14 +733,6 @@ main(int argc, char** argv)
         return 1;
     }
     printf("HOOPS Exchange Loaded.\n");
-
-    hWnd = GetConsoleHwnd();
-
-    bool licenseIsActive;
-    RED_RC rc = setLicense(HOOPS_LICENSE, licenseIsActive);
-    if (rc != RED_OK || !licenseIsActive)
-        return false;
-    printf("HOOPS Luminate Initialized.\n");
 
     struct MHD_Daemon* daemon;
 

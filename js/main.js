@@ -201,7 +201,7 @@ class Main {
                         this._viewer.view.setCamera(camera);
 
                         const params = this._getRenderingParams();
-                        this._serverCaller.CallServerPost("PrepareRendering", params).then(() => {
+                        this._serverCaller.CallServerPost("InitLuminate", params).then(() => {
                             $('[data-command="Raytracing"]').prop("disabled", false).css("background-color", "gainsboro");
                         });
                         $("#loadingImage").hide();
