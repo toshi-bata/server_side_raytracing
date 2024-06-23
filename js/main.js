@@ -163,10 +163,17 @@ class Main {
                 $(e.currentTarget).data("on", true).css("background-color", "khaki");
             }
         });
+
+        // Toolbar
+        $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
+
     }
 
     _loadModel(params, formData, scModelName) {
         $("#loadingImage").show();
+        const now = new Date().getTime();
+        $('#backgroundImg').attr('src', 'css/images/default_background.png');
+
         this._serverCaller.CallServerPost("Clear").then(() => {
             this._requestServerProcess();
             this._serverCaller.CallServerPost("SetOptions", params).then(() => {
@@ -192,6 +199,11 @@ class Main {
                         const camera = this._viewer.view.getCamera();
                         camera.setProjection(Communicator.Projection.Perspective);
                         this._viewer.view.setCamera(camera);
+
+                        const params = this._getRenderingParams();
+                        this._serverCaller.CallServerPost("PrepareRendering", params).then(() => {
+                            $('[data-command="Raytracing"]').prop("disabled", false).css("background-color", "gainsboro");
+                        });
                         $("#loadingImage").hide();
                     });
                 });
@@ -199,31 +211,37 @@ class Main {
         });
     }
 
+    _getRenderingParams() {
+        const size = this._viewer.view.getCanvasSize();
+        const width = size.x;
+        const height = size.y;
+
+        const camera = this._viewer.view.getCamera();
+        const target = camera.getTarget();
+        const up = camera.getUp();
+        const position = camera.getPosition();
+        const projection = camera.getProjection();
+        const cameraW = camera.getWidth();
+        const cameraH = camera.getHeight();
+        const params = {
+            width: width,
+            height: height,
+            target: [target.x, target.y, target.z],
+            up: [up.x, up.y, up.z],
+            position: [position.x, position.y, position.z],
+            projection: projection,
+            cameraW: cameraW,
+            cameraH: cameraH
+        };
+        return params;
+    }
+
     _invokeRaytracing(command) {   
         if (null == this._timerId) {   
             $("#loadingImage").show();
 
-            const size = this._viewer.view.getCanvasSize();
-            const width = size.x;
-            const height = size.y;
+            const params = this._getRenderingParams();
 
-            const camera = this._viewer.view.getCamera();
-            const target = camera.getTarget();
-            const up = camera.getUp();
-            const position = camera.getPosition();
-            const projection = camera.getProjection();
-            const cameraW = camera.getWidth();
-            const cameraH = camera.getHeight();
-            const params = {
-                width: width,
-                height: height,
-                target: [target.x, target.y, target.z],
-                up: [up.x, up.y, up.z],
-                position: [position.x, position.y, position.z],
-                projection: projection,
-                cameraW: cameraW,
-                cameraH: cameraH
-            };
             this._serverCaller.CallServerPost(command, params).then(() => {
                 $("#loadingImage").hide();
 

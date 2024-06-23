@@ -35,6 +35,23 @@ namespace HC_luminate_bridge {
 
     HCLuminateBridge::~HCLuminateBridge()
     {
+        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+
+        // clean default model
+        //iresourceManager->DeleteImage(m_defaultLightingModel.backgroundCubeImage, iresourceManager->GetState());
+        //RED::Factory::DeleteInstance(m_defaultLightingModel.skyLight, iresourceManager->GetState());
+
+        // clean sun sky model
+        iresourceManager->DeleteImage(m_sunSkyLightingModel.backgroundCubeImage, iresourceManager->GetState());
+        RED::Factory::DeleteInstance(m_sunSkyLightingModel.skyLight, iresourceManager->GetState());
+        RED::Factory::DeleteInstance(m_sunSkyLightingModel.sunLight, iresourceManager->GetState());
+
+        // clean env map
+        if (m_environmentMapLightingModel.imagePath != "") {
+            iresourceManager->DeleteImage(m_environmentMapLightingModel.backgroundCubeImage, iresourceManager->GetState());
+            RED::Factory::DeleteInstance(m_environmentMapLightingModel.skyLight, iresourceManager->GetState());
+        }
     }
 
     bool HCLuminateBridge::initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight,
@@ -181,7 +198,7 @@ namespace HC_luminate_bridge {
         // need to add it anywhere.
         //////////////////////////////////////////
         rc = createDefaultModel(m_defaultLightingModel);
-        //rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
+        rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
 
         if (a_environmentMapFilepath.empty())
             rc = setDefaultLightEnvironment();
@@ -190,7 +207,7 @@ namespace HC_luminate_bridge {
                 a_environmentMapFilepath.c_str(), RED::Color::WHITE, true, m_environmentMapLightingModel);
             rc = setEnvMapLightEnvironment(a_environmentMapFilepath, true, RED::Color::WHITE);
         }
-
+        checkDrawHardware(m_window);
         return true;
     }
 
