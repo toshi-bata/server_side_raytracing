@@ -28,9 +28,6 @@ namespace HC_luminate_bridge {
         m_environmentMapLightingModel(), m_frameTracingMode(RED::FTF_PATH_TRACING), m_selectedSegmentTransformIsDirty(false),
         m_rootTransformIsDirty(false), m_iVRL(1)
     {
-#ifdef _DEBUG
-        m_iVRL = 0;
-#endif
     }
 
     HCLuminateBridge::~HCLuminateBridge()
@@ -141,19 +138,11 @@ namespace HC_luminate_bridge {
 
         RED::IWindow* iwindow = m_window->As<RED::IWindow>();
 
-#ifdef _DEBUG
-        RED::Object* defaultVRLObj = NULL;
-        RC_CHECK(iwindow->GetDefaultVRL(defaultVRLObj));
-
-        RED::IViewpointRenderList* defaultVRL = defaultVRLObj->As<RED::IViewpointRenderList>();
-        RC_CHECK(defaultVRL->SetSoftAntiAlias(20, iresourceManager->GetState()));
-#else
         // Auxiliary VRL creation
         rc = iwindow->CreateVRL(m_auxvrl, m_windowWidth, m_windowHeight, RED::FMT_RGBA, true, iresourceManager->GetState());
 
         RED::IViewpointRenderList* iauxvrl = m_auxvrl->As<RED::IViewpointRenderList>();
         RC_CHECK(iauxvrl->SetSoftAntiAlias(20, iresourceManager->GetState()));
-#endif
 
         //////////////////////////////////////////
         // Create and initialize Luminate camera.
@@ -167,11 +156,9 @@ namespace HC_luminate_bridge {
         // Initialize an axis triad to be displayed
         //////////////////////////////////////////
 
-#ifdef _DEBUG
-        rc = createAxisTriad(m_window, m_iVRL, m_axisTriad);
-        if (rc != RED_OK)
-            return false;
-#endif
+        //rc = createAxisTriad(m_window, m_iVRL, m_axisTriad);
+        //if (rc != RED_OK)
+        //    return false;
 
         //////////////////////////////////////////
         // Synchronize HC and Luminate cameras for
@@ -416,12 +403,10 @@ namespace HC_luminate_bridge {
     bool HCLuminateBridge::saveImg(const char* filePath)
     {
         RED_RC rc;
-#ifndef _DEBUG
         RED::IViewpointRenderList* defaultVRL = m_auxvrl->As<RED::IViewpointRenderList>();
         RED::Object* renderimg = defaultVRL->GetRenderImage();
 
         rc = RED::ImageTools::Save(renderimg, false, filePath, false, true, 1.0);
-#endif
         return true;
     }
 
@@ -433,9 +418,9 @@ namespace HC_luminate_bridge {
             m_conversionDataPtr != nullptr ? m_conversionDataPtr->viewHandedness : Handedness::RightHanded;
 
         rc = syncCameras(m_camera, viewHandedness, m_windowWidth, m_windowHeight, a_cameraInfo);
-#ifdef _DEBUG
-        rc = synchronizeAxisTriadWithCamera(m_axisTriad, m_camera);
-#endif
+
+        //rc = synchronizeAxisTriadWithCamera(m_axisTriad, m_camera);
+
         m_newFrameIsRequired = true;
 
         return rc;
