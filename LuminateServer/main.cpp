@@ -40,6 +40,7 @@ using namespace HC_luminate_bridge;
 
 static char s_pcWorkingDir[256];
 static char s_pcScModelsDir[256];
+static char s_pcHtmlRootDir[256];
 static char s_pcModelName[256];
 static std::map<std::string, std::string> s_mParams;
 
@@ -648,7 +649,7 @@ answer_to_connection(void* cls,
                 floatArr.push_back(statistics.remainingTimeMilliseconds);
 
                 char filePath[FILENAME_MAX];
-                sprintf(filePath, "C:\\git\\toshi-bata\\server_side_raytracing\\%s.png", con_info->sessionId);
+                sprintf(filePath, "%s%s.png", s_pcHtmlRootDir, con_info->sessionId);
                 pHCLuminateBridge->saveImg(filePath);
 
                 con_info->answerstring = response_success;
@@ -755,6 +756,13 @@ main(int argc, char** argv)
     if (0 == strlen(s_pcScModelsDir))
         return 1;
     printf("SC_MODELS_DIR=%s\n", s_pcScModelsDir);
+
+    // Get html root dir
+    GetEnvironmentVariablePath("HTML_ROOT_DIR", s_pcHtmlRootDir, true);
+    if (0 == strlen(s_pcHtmlRootDir))
+        return 1;
+    printf("HTML_ROOT_DIR=%s\n", s_pcHtmlRootDir);
+
 
     pExProcess = new ExProcess();
     if (!pExProcess->Init())
