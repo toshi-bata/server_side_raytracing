@@ -111,7 +111,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Debug-static;$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\lib\win64d;$(HLUMINATE_INSTALL_DIR)\Redsdk.m\Lib\Win64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Debug-static;$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\lib\win64d;$(HLUMINATE_INSTALL_DIR)\BuildImage\Win64</AdditionalLibraryDirectories>
       <AdditionalDependencies>libmicrohttpd_d.lib;libconverter.lib;REDCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -148,7 +148,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\lib\win64;$(HLUMINATE_INSTALL_DIR)\Redsdk.m\Lib\Win64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\lib\win64;$(HLUMINATE_INSTALL_DIR)\BuildImage\Win64</AdditionalLibraryDirectories>
       <AdditionalDependencies>libmicrohttpd.lib;libconverter.lib;REDCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

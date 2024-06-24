@@ -3,9 +3,9 @@ This demo runs raytracing rendring in server side using offscreen buffer of HOOP
 
 ## Dependencies
 ### SDKs in use (version)
-* HOOPS Communicator (2024.1.0)
-* HOOPS Exchange (2024.1.0)
-* HOOPS Luminate (2024.1.0)
+* HOOPS Communicator (2024.3.0)
+* HOOPS Exchange (2024.3.0)
+* HOOPS Luminate (2024.3.0)
 
 ### Third paty module
 * libmicrohttpd (1.0.0)<br>
@@ -31,9 +31,10 @@ ExLuServer is a server side console application which is using HOOPS Exchange, L
 #### Windows
 1. Unzip HOOPS Exchange SDK and locate a valid hoops_license.h in `includ/` 
 2. Unzip HOOPS Communicator SDK and locate a valid hoops_license.h in `authoring/libconverter/include/`
-3. Unzip libconverter SDK
-4. Edit ExLuServer¥_VS2019.bat accoording to your environment and open ExLuServer.sln using the bat file
-5. Build the solution
+3. Unzip HOOPS Luminate SDK and locate a valid hoops_license.h in `Redsdk.m/Public/`
+4. Unzip libconverter SDK
+5. Edit ExLuServer¥_VS2019.bat accoording to your environment and open ExLuServer.sln using the bat file
+6. Build the solution
      
 ## Start demo
 1. Launch HTTP server with tarminal<br>
