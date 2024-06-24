@@ -590,24 +590,6 @@ answer_to_connection(void* cls,
         }
         else if (0 == strcmp(url, "/Raytracing"))
         {
-            double width, height;
-            if (!paramStrToDbl("width", width));
-            if (!paramStrToDbl("height", height));
-
-            double *target, *up, *position;
-            if (!paramStrToXYZ("target", target)) return MHD_NO;
-            if (!paramStrToXYZ("up", up)) return MHD_NO;
-            if (!paramStrToXYZ("position", position)) return MHD_NO;
-
-            int projection;
-            if (!paramStrToInt("projection", projection));
-
-            double cameraW, cameraH;
-            if (!paramStrToDbl("cameraW", cameraW));
-            if (!paramStrToDbl("cameraH", cameraH));
-
-            std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
-
             if (0 == m_mpLuminateBridge.count(con_info->sessionId))
             {
                 con_info->answerstring = response_error;
@@ -615,11 +597,29 @@ answer_to_connection(void* cls,
             }
             else
             {
+                double width, height;
+                if (!paramStrToDbl("width", width));
+                if (!paramStrToDbl("height", height));
+
+                double *target, *up, *position;
+                if (!paramStrToXYZ("target", target)) return MHD_NO;
+                if (!paramStrToXYZ("up", up)) return MHD_NO;
+                if (!paramStrToXYZ("position", position)) return MHD_NO;
+
+                int projection;
+                if (!paramStrToInt("projection", projection));
+
+                double cameraW, cameraH;
+                if (!paramStrToDbl("cameraW", cameraW));
+                if (!paramStrToDbl("cameraH", cameraH));
+
+                std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
+
                 HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
                 
                 CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
-                pHCLuminateBridge->syncScene(aMeshProps, cameraInfo);
+                pHCLuminateBridge->syncScene(width, height, aMeshProps, cameraInfo);
 
                 con_info->answerstring = response_success;
                 con_info->answercode = MHD_HTTP_OK;
@@ -683,6 +683,43 @@ answer_to_connection(void* cls,
                 CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
                 pHCLuminateBridge->setSyncCamera(true, cameraInfo);
+
+                con_info->answerstring = response_success;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/Resize"))
+        {
+            if (0 == m_mpLuminateBridge.count(con_info->sessionId))
+            {
+                con_info->answerstring = response_error;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+            else
+            {
+                HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
+
+                double width, height;
+                if (!paramStrToDbl("width", width));
+                if (!paramStrToDbl("height", height));
+
+                double* target, * up, * position;
+                if (!paramStrToXYZ("target", target)) return MHD_NO;
+                if (!paramStrToXYZ("up", up)) return MHD_NO;
+                if (!paramStrToXYZ("position", position)) return MHD_NO;
+
+                int projection;
+                if (!paramStrToInt("projection", projection));
+
+                double cameraW, cameraH;
+                if (!paramStrToDbl("cameraW", cameraW));
+                if (!paramStrToDbl("cameraH", cameraH));
+
+                CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
+
+                pHCLuminateBridge->resize(width, height, cameraInfo);
 
                 con_info->answerstring = response_success;
                 con_info->answercode = MHD_HTTP_OK;

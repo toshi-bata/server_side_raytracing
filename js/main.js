@@ -64,7 +64,6 @@ class Main {
                             if (camera.equals(this._prevCamera)) {
                                 const params = this._getRenderingParams();
                                 this._serverCaller.CallServerPost("SyncCamera", params).then(() => {
-                                    $("#progressBar").progressbar("value", 0);
                                     this._invokeDraw();
                                 });
                             }
@@ -85,12 +84,24 @@ class Main {
         let resizeTimer;
         let interval = Math.floor(1000 / 60 * 10);
         $(window).resize(() => {
-        if (resizeTimer !== false) {
-            clearTimeout(resizeTimer);
-        }
-        resizeTimer = setTimeout(() => {
-            this._viewer.resizeCanvas();
-        }, interval);
+            if (resizeTimer !== false) {
+                clearTimeout(resizeTimer);
+            }
+            resizeTimer = setTimeout(() => {
+                this._viewer.resizeCanvas();
+
+                // Resize Lumionate
+                let isOn = $('[data-command="Raytracing"]').data("on");
+                if (isOn) {
+                    this._clearRaytracing();
+
+                    const params = this._getRenderingParams();
+                    this._serverCaller.CallServerPost("Resize", params).then(() => {
+                        this._invokeDraw();
+                    });
+                }
+
+            }, interval);
         });
 
         // Before page reload or close

@@ -168,7 +168,7 @@ namespace HC_luminate_bridge {
 		 * The previous scene will be destroyed.
 		 * @return True if success, otherwise False.
 		 */
-		bool syncScene(std::vector<MeshPropaties>, CameraInfo a_cameraInfo);
+		bool syncScene(const int a_windowWidth, const int a_windowHeight, std::vector<MeshPropaties>, CameraInfo a_cameraInfo);
 
 		/**
 		 * Shutdown completely Luminate.
@@ -183,7 +183,7 @@ namespace HC_luminate_bridge {
 		 * @param[in] a_windowHeight New height to set.
 		 * @return True if success, otherwise False.
 		 */
-		bool resize(int a_windowWidth, int a_windowHeight);
+		bool resize(int a_windowWidth, int a_windowHeight, CameraInfo a_cameraInfo);
 
 		bool initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight,
 			std::string const& a_environmentMapFilepath, CameraInfo a_cameraInfo);

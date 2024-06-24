@@ -211,7 +211,7 @@ namespace HC_luminate_bridge {
         return shutdownLuminate(m_window) == RED_OK;
     }
 
-    bool HCLuminateBridge::resize(int a_windowWidth, int a_windowHeight)
+    bool HCLuminateBridge::resize(int a_windowWidth, int a_windowHeight, CameraInfo a_cameraInfo)
     {
         //////////////////////////////////////////
         // Resize Luminate window.
@@ -233,8 +233,7 @@ namespace HC_luminate_bridge {
         if (m_windowHeight == 0 || m_windowWidth == 0)
             return true;
 
-        //return syncLuminateCamera() == RED_OK;
-        return true;
+        return syncLuminateCamera(a_cameraInfo) == RED_OK;
     }
 
     bool HCLuminateBridge::draw()
@@ -280,8 +279,12 @@ namespace HC_luminate_bridge {
         m_newFrameIsRequired = true;
     }
 
-    bool HCLuminateBridge::syncScene(std::vector <MeshPropaties> aMeshProps, CameraInfo a_cameraInfo)
+    bool HCLuminateBridge::syncScene(const int a_windowWidth, const int a_windowHeight, std::vector <MeshPropaties> aMeshProps, CameraInfo a_cameraInfo)
     {
+        // Check resize window
+        if (m_windowWidth != a_windowWidth || m_windowHeight != a_windowHeight)
+            resize(a_windowWidth, a_windowHeight, a_cameraInfo);
+
         //////////////////////////////////////////
         // Retrieve the resource manager from singleton
         //////////////////////////////////////////
@@ -745,6 +748,12 @@ namespace HC_luminate_bridge {
 
         RED::IWindow* iwindow = a_window->As<RED::IWindow>();
         RC_TEST(iwindow->Resize(a_newWidth, a_newHeight, iresourceManager->GetState()));
+
+        RED::Object* auxVRLObj = NULL;
+        RC_TEST(iwindow->GetVRL(auxVRLObj, 1));
+
+        RED::IViewpointRenderList* iauxvrl = auxVRLObj->As<RED::IViewpointRenderList>();
+        RC_TEST(iauxvrl->SetSize(a_newWidth, a_newHeight, iresourceManager->GetState()));
 
         return RED_OK;
     }
