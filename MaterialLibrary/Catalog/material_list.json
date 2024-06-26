@@ -1,0 +1,30 @@
+{
+    "Glass": [
+        {"id": 0, "name": "Clear glass", "img": "glass_clear_glass.png", "redFile": "glass_clear_glass.red"}
+    ],
+    "Jewellery": [
+        {"id": 0, "name": "Amber", "img": "jewellery_amber.png", "redFile": "jewellery_amber.red"},
+        {"id": 1, "name": "Diamond (white)", "img": "jewellery_diamond_(white).png", "redFile": "jewellery_diamond_(white).red"},
+        {"id": 2, "name": "Emerald (green)", "img": "jewellery_emerald_(green).png", "redFile": "jewellery_emerald_(green).red"},
+        {"id": 3, "name": "Onyx", "img": "jewellery_onyx.png", "redFile": "jewellery_onyx.red"},
+        {"id": 4, "name": "Pearl", "img": "jewellery_pearl.png", "redFile": "jewellery_pearl.red"},
+        {"id": 5, "name": "Ruby", "img": "jewellery_ruby.png", "redFile": "jewellery_ruby.red"},
+        {"id": 6, "name": "Sapphire (blue)", "img": "jewellery_sapphire_(blue).png", "redFile": "jewellery_sapphire_(blue).red"},
+        {"id": 7, "name": "Topaz (yellow)", "img": "jewellery_topaz_(yellow).png", "redFile": "jewellery_topaz_(yellow).red"}
+    ],
+    "Metal": [
+        {"id": 0, "name": "Brass", "img": "metal_Brass.png", "redFile": "metal_brass.red"},
+        {"id": 1, "name": "Brushed Gold", "img": "metal_brushed_gold.png", "redFile": "metal_brushed_gold.red"},
+        {"id": 2, "name": "Chrome", "img": "metal_chrome.png", "redFile": "metal_chrome.red"},
+        {"id": 3, "name": "Copper", "img": "metal_copper.png", "redFile": "metal_copper.red"},
+        {"id": 4, "name": "Iron", "img": "metal_iron.png", "redFile": "metal_iron.red"},
+        {"id": 5, "name": "Polished Gold", "img": "metal_polished_gold.png", "redFile": "metal_polished_gold.red"},
+        {"id": 6, "name": "Silver", "img": "metal_silver.png", "redFile": "metal_silver.red"},
+        {"id": 7, "name": "Titanium", "img": "metal_titanium.png", "redFile": "metal_titanium.red"}
+    ],
+    "Plastic": [
+        {"id": 0, "name": "Mat Plastic", "img": "plastic_mat_plastic.png", "redFile": "plastic_mat_plastic.red"},
+        {"id": 1, "name": "Shiny Plastic", "img": "plastic_shiny_plastic.png", "redFile": "plastic_shiny_plastic.red"},
+        {"id": 2, "name": "Transparent Plastic", "img": "plastic_transparent_plastic.png", "redFile": "plastic_transparent_plastic.red"}
+    ]
+}

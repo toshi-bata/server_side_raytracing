@@ -45,3 +45,28 @@ table td {
 body {
     overflow: hidden;
 }
+.highlight {
+    background-color:yellow;
+}
+.materialList {
+    min-width: 200px;
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    overflow: auto;
+}
+.materialList_thumbnail {
+    margin-left: 10px;
+    flex: 0 1 calc(50% - 10px);
+}
+.materialList_thumbnail:nth-child(n + 3) {
+    margin-top: 10px;
+}
+.materialList img {  
+    width: 100%;  
+    display: block;
+    opacity: 0.3;
+}
+.thumbnail-selected img {
+    opacity: 1;
+}

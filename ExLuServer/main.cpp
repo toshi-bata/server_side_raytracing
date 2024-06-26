@@ -551,8 +551,8 @@ answer_to_connection(void* cls,
         else if (0 == strcmp(url, "/PrepareRendering"))
         {
             double width, height;
-            if (!paramStrToDbl("width", width));
-            if (!paramStrToDbl("height", height));
+            if (!paramStrToDbl("width", width)) return MHD_NO;
+            if (!paramStrToDbl("height", height)) return MHD_NO;
 
             double* target, * up, * position;
             if (!paramStrToXYZ("target", target)) return MHD_NO;
@@ -560,11 +560,11 @@ answer_to_connection(void* cls,
             if (!paramStrToXYZ("position", position)) return MHD_NO;
 
             int projection;
-            if (!paramStrToInt("projection", projection));
+            if (!paramStrToInt("projection", projection)) return MHD_NO;
 
             double cameraW, cameraH;
-            if (!paramStrToDbl("cameraW", cameraW));
-            if (!paramStrToDbl("cameraH", cameraH));
+            if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
+            if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
             if (0 < m_mpLuminateBridge.count(con_info->sessionId))
             {
@@ -598,8 +598,8 @@ answer_to_connection(void* cls,
             else
             {
                 double width, height;
-                if (!paramStrToDbl("width", width));
-                if (!paramStrToDbl("height", height));
+                if (!paramStrToDbl("width", width)) return MHD_NO;
+                if (!paramStrToDbl("height", height)) return MHD_NO;
 
                 double *target, *up, *position;
                 if (!paramStrToXYZ("target", target)) return MHD_NO;
@@ -607,11 +607,11 @@ answer_to_connection(void* cls,
                 if (!paramStrToXYZ("position", position)) return MHD_NO;
 
                 int projection;
-                if (!paramStrToInt("projection", projection));
+                if (!paramStrToInt("projection", projection)) return MHD_NO;
 
                 double cameraW, cameraH;
-                if (!paramStrToDbl("cameraW", cameraW));
-                if (!paramStrToDbl("cameraH", cameraH));
+                if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
+                if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
                 std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
 
@@ -674,11 +674,11 @@ answer_to_connection(void* cls,
                 if (!paramStrToXYZ("position", position)) return MHD_NO;
 
                 int projection;
-                if (!paramStrToInt("projection", projection));
+                if (!paramStrToInt("projection", projection)) return MHD_NO;
 
                 double cameraW, cameraH;
-                if (!paramStrToDbl("cameraW", cameraW));
-                if (!paramStrToDbl("cameraH", cameraH));
+                if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
+                if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
                 CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
@@ -702,8 +702,8 @@ answer_to_connection(void* cls,
                 HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
 
                 double width, height;
-                if (!paramStrToDbl("width", width));
-                if (!paramStrToDbl("height", height));
+                if (!paramStrToDbl("width", width)) return MHD_NO;
+                if (!paramStrToDbl("height", height)) return MHD_NO;
 
                 double* target, * up, * position;
                 if (!paramStrToXYZ("target", target)) return MHD_NO;
@@ -711,15 +711,47 @@ answer_to_connection(void* cls,
                 if (!paramStrToXYZ("position", position)) return MHD_NO;
 
                 int projection;
-                if (!paramStrToInt("projection", projection));
+                if (!paramStrToInt("projection", projection)) return MHD_NO;
 
                 double cameraW, cameraH;
-                if (!paramStrToDbl("cameraW", cameraW));
-                if (!paramStrToDbl("cameraH", cameraH));
+                if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
+                if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
                 CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
                 pHCLuminateBridge->resize(width, height, cameraInfo);
+
+                con_info->answerstring = response_success;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/SetMaterial"))
+        {
+            if (0 == m_mpLuminateBridge.count(con_info->sessionId))
+            {
+                con_info->answerstring = response_error;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+            else
+            {
+                HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
+
+                std::string nodeName, redFile;
+                if (!paramStrToStr("nodeName", nodeName)) return MHD_NO;
+                if (!paramStrToStr("redFile", redFile)) return MHD_NO;
+
+                int preserveColor, overrideMaterial;
+                if (!paramStrToInt("preserveColor", preserveColor)) return MHD_NO;
+                if (!paramStrToInt("overrideMaterial", overrideMaterial)) return MHD_NO;
+
+                // Get material
+                RED::String redfilename = RED::String(s_pcHtmlRootDir);
+                redfilename.Add(RED::String("MaterialLibrary\\"));
+                redfilename.Add(RED::String(redFile.data()));
+
+                pHCLuminateBridge->applyMaterial(nodeName.data(), redfilename, (bool)overrideMaterial, (bool)preserveColor);
 
                 con_info->answerstring = response_success;
                 con_info->answercode = MHD_HTTP_OK;

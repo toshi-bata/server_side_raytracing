@@ -15,6 +15,11 @@ class Main {
         this._timerId;
         this._isBusy;
         this._prevCamera;
+        this._setMaterialOp;
+        this._setMaterialOpHandle;
+        this._materialList;
+        this._currentMaterialName;
+        this._currentMaterialId;
     }
 
     start (port, viewerMode, modelName, reverseProxy) {
@@ -76,6 +81,8 @@ class Main {
                 }
             });
 
+            this._setMaterialOp = new SetMaterialOperator(this._viewer, this);
+            this._setMaterialOpHandle = this._viewer.registerCustomOperator(this._setMaterialOp);
             this._viewer.start();
         });
     }
@@ -83,7 +90,7 @@ class Main {
     _initEvents() {
         let resizeTimer;
         let interval = Math.floor(1000 / 60 * 10);
-        $(window).resize(() => {
+        $(window).resize((e) => {
             if (resizeTimer !== false) {
                 clearTimeout(resizeTimer);
             }
@@ -161,6 +168,39 @@ class Main {
         $('#sewingTol').val(0.01);
         $('#classifyTol').val(0.0001);
 
+        // Prepare Material dialog
+        $("#materialsDlg").dialog({
+            autoOpen: false,
+            height: 550,
+            width: 350,
+            modal: false,
+            title: "Materials",
+            closeOnEscape: true,
+            position: {my: "left top", at: "left bottom", of: "#toolbarGr"},
+        });
+
+        // Load material info from JSON file
+        const url = "MaterialLibrary/Catalog/material_list.json";
+        $.getJSON(url, (materialList) => {
+            this._materialList = materialList;
+
+            // Initialize Material type combobox 
+            for (let material in materialList) {
+                $('#matTypeId').append($('<option>').html(material).val(material));
+            }
+
+            // Set default material type
+            $('#matTypeId').val("Metal");
+            this._setMaterialThumbnail("Metal");
+        });
+
+        // Material type chang event handler
+        $('#matTypeId').change((e) => {
+            const val = $(e.currentTarget).val();
+            this._setMaterialThumbnail(val);
+        });
+
+        // Progress bar
         $("#progressBar").progressbar({
             value: 0,
             change: () => {
@@ -183,6 +223,16 @@ class Main {
                 case "Raytracing": {
                     this._invokeRaytracing(command);
                 } break;
+                case "SetMaterial": {
+                    if (!isOn) {
+                        $('#materialsDlg').dialog('open');
+                        this._viewer.operatorManager.push(this._setMaterialOpHandle);
+                    }
+                    else {
+                        $('#materialsDlg').dialog('close');
+                        this._setDefaultOperators();
+                    }
+                } break;
                 default: {} break;
             }
         });
@@ -200,6 +250,52 @@ class Main {
         // Toolbar
         $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
 
+    }
+
+    _setDefaultOperators() {
+        this._viewer.operatorManager.clear();
+        this._viewer.operatorManager.push(Communicator.OperatorId.Navigate);
+        this._viewer.operatorManager.push(Communicator.OperatorId.Select);
+        this._viewer.operatorManager.push(Communicator.OperatorId.Cutting);
+        this._viewer.operatorManager.push(Communicator.OperatorId.Handle);
+        this._viewer.operatorManager.push(Communicator.OperatorId.NavCube);
+        this._viewer.operatorManager.push(Communicator.OperatorId.AxisTriad);
+    }
+
+    _setMaterialThumbnail(matType) {
+        $('.materialList').empty();
+
+        const materials = this._materialList[matType];
+        // Set thumbnails
+        for (let mat of materials) {
+            const image = new Image();
+            image.src = "MaterialLibrary/Catalog/" + mat.img;
+
+            let $ele = $('<div />', {class:'materialList_thumbnail',title: mat.name,'data-file': mat.redFile});
+            $($ele).append(image);
+            $($ele).append(mat.name);
+
+            $('.materialList').append($ele);
+
+        }
+
+        // Set event handler
+        $('.materialList_thumbnail').on('click', (e) => {
+            this._currentMaterialName = e.currentTarget.dataset.file;
+
+            // Highlight selected thumbnail
+            const id = $('.materialList_thumbnail').index(e.currentTarget) + 1
+            $(`.materialList_thumbnail:nth-child(${this._currentMaterialId})`).removeClass('thumbnail-selected');
+            this._currentMaterialId = id;
+            $(`.materialList_thumbnail:nth-child(${this._currentMaterialId})`).addClass('thumbnail-selected')
+        });
+
+        // Set default
+        {
+            this._currentMaterialId = 1;
+            $(`.materialList_thumbnail:nth-child(${this._currentMaterialId})`).addClass('thumbnail-selected')
+            this._currentMaterialName = materials[0].redFile;
+        }
     }
 
     _loadModel(params, formData, scModelName) {
@@ -331,5 +427,21 @@ class Main {
             this._isBusy = false;
             $("#loadingImage").hide();
         }
+    }
+
+    setMaterial(name) {
+        const preserveColor = Number($("#checkPreserveColor").prop('checked'));
+        const overrideMaterial = Number($("#checkOverrideMaterial").prop('checked'));
+
+        const params = {
+            nodeName: name,
+            redFile: this._currentMaterialName,
+            preserveColor: preserveColor,
+            overrideMaterial: overrideMaterial
+        }
+
+        this._serverCaller.CallServerPost("SetMaterial", params).then((arr) => {
+            this._viewer.model.resetModelHighlight();
+        });
     }
 }

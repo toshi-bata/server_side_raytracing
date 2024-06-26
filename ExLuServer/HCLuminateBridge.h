@@ -59,18 +59,6 @@ namespace HC_luminate_bridge {
 	using SelectedSegmentInfoPtr = std::shared_ptr<SelectedSegmentInfo>;
 
 	/**
-	* HPS::UTF8 comparator in order to use it as map key.
-	*/
-	struct HPSUTF8Comparator {
-		bool operator()(char* const& lhs, char* const& rhs) const
-		{
-			char const* lchars = lhs;
-			char const* rchars = rhs;
-			return std::string(lchars) < std::string(rchars);
-		}
-	};
-
-	/**
 	 * Mapping between segment hash and associated Luminate mesh shapes.
 	 */
 	using SegmentMeshShapesMap = std::map<intptr_t, std::vector<RED::Object*>>;
@@ -78,7 +66,7 @@ namespace HC_luminate_bridge {
 	/**
 	 * Mapping between segment hash and associated Luminate transform shape.
 	 */
-	using SegmentTransformShapeMap = std::map<char*, RED::Object*, HPSUTF8Comparator>;
+	using SegmentTransformShapeMap = std::map<std::string, RED::Object*>;
 
 	/**
 	* LuminateSceneInfo extension with specific HPS informations.
@@ -86,6 +74,7 @@ namespace HC_luminate_bridge {
 	struct ConversionContextHPS : LuminateSceneInfo {
 		SegmentMeshShapesMap segmentMeshShapesMap;
 		SegmentTransformShapeMap segmentTransformShapeMap;
+		std::map<std::string, RED::Color> nodeDiffuseColorMap;
 	};
 
 	using ConversionContextHPSPtr = std::shared_ptr<ConversionContextHPS>;
@@ -195,6 +184,14 @@ namespace HC_luminate_bridge {
 		FrameStatistics getFrameStatistics();
 
 		/**
+		 * Get selected luminate transform node.
+		 * @return Selected luminate transform node object pointer.
+		 */
+		RED::Object* getSelectedLuminateTransformNode(char* a_node_name);
+
+		RED::Color getSelectedLuminateDeffuseColor(char* a_node_name);
+
+		/**
 		 * Sets current lighting environment as a default model.
 		 */
 		RED_RC setDefaultLightEnvironment();
@@ -215,7 +212,13 @@ namespace HC_luminate_bridge {
 		void setSyncCamera(const bool a_sync, CameraInfo a_cameraInfo) { m_bSyncCamera = a_sync; m_cameraInfo = a_cameraInfo; }
 
 		CameraInfo creteCameraInfo(double* a_target, double* a_up, double* a_position, int a_projection, double a_width, double a_height);
+		
 		bool saveImg(const char* filePath);
+
+		void stopFrameTracing();
+
+		void applyMaterial(const char* a_node_name, RED::String a_redfilename, bool bOverrideMaterial, bool bPreserveColor);
+
 	private:
 		/**
 		 * Removes the current lighting environment from the scene.

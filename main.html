@@ -18,6 +18,7 @@
         <script type="text/javascript" src="js/ServerCaller.js"></script>
         <script type="text/javascript" src="js/create_viewer.js"></script>
         <script type="text/javascript" src="js/general_func.js"></script>
+        <script type="text/javascript" src="js/SetMaterialOp.js"></script>
 
         <link rel="stylesheet" href="css/main.css">
         <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
@@ -58,6 +59,7 @@
         <div id="toolbarGr">
             <input title="Upload 3D CAD file" class="toolbarBtn" data-command="Upload" type="image" name="image_button" src="css/images/upload.png" style="margin-right: 10px;" />
             <input title="Raytracing" class="toolbarBtn toggleBtn" data-command="Raytracing" type="image" name="image_button" src="css/images/raytracing.png" />
+            <input title="Set material" class="toolbarBtn toggleBtn" data-command="SetMaterial" type="image" name="image_button" src="css/images/material.png" />
         </div>
 
         <form id="UploadDlg" action="" method="post" enctype="multipart/form-data" style="display:none;">
@@ -87,6 +89,22 @@
             <div style="text-align: right;">
                 <input type="submit" value="Upload">
             </div>
+        </form>
+
+        <form id="materialsDlg" style="display:none;">
+            <div>
+                <input type="checkbox" id="checkOverrideMaterial">
+                <label for="checkOverrideMaterial">Override Material</label>
+            </div>
+            <div>
+                <input type="checkbox" id="checkPreserveColor">
+                <label for="checkPreserveColor">Preserve Color</label>
+            </div>
+            <div>
+                <label for="matTypeId" style="margin-right: 5px;">Material Type:</label>
+                <select id="matTypeId"></select>
+            </div>
+            <div class="materialList"></div>
         </form>
 
         <div id="progress" class="centerBotomBlock" style="display:none;">

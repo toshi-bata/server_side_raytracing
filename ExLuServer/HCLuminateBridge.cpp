@@ -17,6 +17,10 @@
 #include <REDILightShape.h>
 #include <REDFrameStatistics.h>
 #include "REDImageTools.h"
+#include <REDIREDFile.h>
+#include <REDIDataManager.h>
+#include <REDIMaterialController.h>
+#include <REDIMaterialControllerProperty.h>
 
 #include "LuminateRCTest.h"
 
@@ -185,7 +189,7 @@ namespace HC_luminate_bridge {
         // need to add it anywhere.
         //////////////////////////////////////////
         rc = createDefaultModel(m_defaultLightingModel);
-        rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
+        //rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
 
         if (a_environmentMapFilepath.empty())
             rc = setDefaultLightEnvironment();
@@ -576,6 +580,139 @@ namespace HC_luminate_bridge {
         return sceneInfoPtr;
     }
 
+    RED::Object* HCLuminateBridge::getSelectedLuminateTransformNode(char* a_node_name)
+    {
+        if (a_node_name != nullptr) {
+            ConversionContextHPS* conversionDataHPS = (ConversionContextHPS*)m_conversionDataPtr.get();
+
+            if (0 < conversionDataHPS->segmentTransformShapeMap.count(a_node_name))
+                return conversionDataHPS->segmentTransformShapeMap[a_node_name];
+        }
+        return nullptr;
+    }
+
+    RED::Color HCLuminateBridge::getSelectedLuminateDeffuseColor(char* a_node_name)
+    {
+        if (a_node_name != nullptr) {
+            ConversionContextHPS* conversionDataHPS = (ConversionContextHPS*)m_conversionDataPtr.get();
+
+            if (0 < conversionDataHPS->segmentTransformShapeMap.count(a_node_name))
+                return conversionDataHPS->nodeDiffuseColorMap[a_node_name];
+        }
+        return RED::Color::GREY;
+    }
+
+    void HCLuminateBridge::stopFrameTracing()
+    {
+        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+
+        if (iresourceManager->GetState().GetNumber() > 1) {
+            RED::IWindow* iwin = m_window->As<RED::IWindow>();
+            iwin->FrameTracingStop();
+
+            iresourceManager->BeginState();
+        }
+
+        resetFrame();
+    }
+
+    void HCLuminateBridge::applyMaterial(const char* a_node_name, RED::String a_redfilename, bool bOverrideMaterial, bool bPreserveColor)
+    {
+        RED::Object* selectedTransformNode = getSelectedLuminateTransformNode((char*)a_node_name);
+        if (selectedTransformNode != nullptr) {
+            RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+            RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+            RED::IShape* iShape = selectedTransformNode->As<RED::IShape>();
+
+            RED::Object* libraryMaterial = nullptr;
+            {
+                // As a new material will be created, some images will be created as well.
+                // Or images operations are immediate and should occur without ongoing rendering.
+                // Thus we need to stop current frame tracing.
+                stopFrameTracing();
+
+                // create the file instance
+                RED::Object* file = RED::Factory::CreateInstance(CID_REDFile);
+                RED::IREDFile* ifile = file->As<RED::IREDFile>();
+
+                // load the file
+                RED::StreamingPolicy policy;
+                RED::FileHeader fheader;
+                RED::FileInfo finfo;
+                RED::Vector< unsigned int > contexts;
+
+                RC_CHECK(ifile->Load(a_redfilename, iresourceManager->GetState(), policy, fheader, finfo, contexts));
+
+                // release the file
+                RC_CHECK(RED::Factory::DeleteInstance(file, iresourceManager->GetState()));
+
+                // retrieve the data manager
+                RED::IDataManager* idatamgr = iresourceManager->GetDataManager()->As<RED::IDataManager>();
+
+                // parse the loaded contexts looking for the first material.
+                for (unsigned int c = 0; c < contexts.size(); ++c) {
+                    unsigned int mcount;
+                    RC_CHECK(idatamgr->GetMaterialsCount(mcount, contexts[c]));
+
+                    if (mcount > 0) {
+                        RC_CHECK(idatamgr->GetMaterial(libraryMaterial, contexts[c], 0));
+                        break;
+                    }
+                }
+            }
+
+            if (libraryMaterial != nullptr) {
+                // Clone the material to be able to change its properties without altering the library one.
+                RED::Object* clonedMaterial;
+                RC_CHECK(iresourceManager->CloneMaterial(clonedMaterial, libraryMaterial, iresourceManager->GetState()));
+
+                if (bPreserveColor)
+                {
+                    // Duplicate the material controller
+                    RED_RC returnCode;
+                    RED::Object* materialController = iresourceManager->GetMaterialController(libraryMaterial);
+                    RED::Object* clonedMaterialController = RED::Factory::CreateMaterialController(*resourceManager,
+                        clonedMaterial,
+                        "Realistic",
+                        "",
+                        "Tunable realistic material",
+                        "Realistic",
+                        "Redway3d",
+                        returnCode);
+
+                    RC_CHECK(returnCode);
+                    RED::IMaterialController* clonedIMaterialController =
+                        clonedMaterialController->As<RED::IMaterialController>();
+                    RC_CHECK(clonedIMaterialController->CopyFrom(*materialController, clonedMaterial));
+
+                    // Set HPS segment diffuse color as Luminate diffuse + reflection.
+
+                    RED::Object* diffuseColorProperty = clonedIMaterialController->GetProperty(RED_MATCTRL_DIFFUSE_COLOR);
+                    RED::IMaterialControllerProperty* iDiffuseColorProperty =
+                        diffuseColorProperty->As<RED::IMaterialControllerProperty>();
+                    iDiffuseColorProperty->SetColor(getSelectedLuminateDeffuseColor((char*)a_node_name),
+                        iresourceManager->GetState());
+
+                }
+
+                RED::Object* currentMaterial;
+                iShape->GetMaterial(currentMaterial);
+
+                if (bOverrideMaterial)
+                {
+                    iShape->SetMaterial(clonedMaterial, iresourceManager->GetState());
+                }
+                else
+                {
+                    RED::IMaterial* currentIMaterial = currentMaterial->As<RED::IMaterial>();
+                    RC_CHECK(currentIMaterial->CopyFrom(*clonedMaterial, iresourceManager->GetState()));
+                }
+
+                resetFrame();
+            }
+        }
+    }
 
     RealisticMaterialInfo getSegmentMaterialInfo(MeshPropaties meshProps,
         RED::Object* a_resourceManager,
@@ -677,6 +814,13 @@ namespace HC_luminate_bridge {
         RED::Object* transform = RED::Factory::CreateInstance(CID_REDTransformShape);
         RED::ITransformShape* itransform = transform->As<RED::ITransformShape>();
 
+        // Register transform shape associated to the segment.
+        a_ioConversionContext.segmentTransformShapeMap[meshProps.name] = transform;
+
+        // DiffuseColor color.
+        RED::Color deffuseColor = RED::Color(float(meshProps.color.m_dRed), float(meshProps.color.m_dGreen), float(meshProps.color.m_dBlue), 1.f);
+        a_ioConversionContext.nodeDiffuseColorMap[meshProps.name] = deffuseColor;
+
         transform->SetID(meshProps.name);
 
         // Apply transform matrix.
@@ -747,7 +891,7 @@ namespace HC_luminate_bridge {
         //////////////////////////////////////////
 
         RED::IWindow* iwindow = a_window->As<RED::IWindow>();
-        RC_TEST(iwindow->Resize(a_newWidth, a_newHeight, iresourceManager->GetState()));
+        //RC_TEST(iwindow->Resize(a_newWidth, a_newHeight, iresourceManager->GetState()));
 
         RED::Object* auxVRLObj = NULL;
         RC_TEST(iwindow->GetVRL(auxVRLObj, 1));
