@@ -17,9 +17,10 @@ class Main {
         this._prevCamera;
         this._setMaterialOp;
         this._setMaterialOpHandle;
-        this._materialList;
+        this._materialDB;
         this._currentMaterialName;
         this._currentMaterialId;
+        this._currentLightingId;
     }
 
     start (port, viewerMode, modelName, reverseProxy) {
@@ -117,7 +118,7 @@ class Main {
         });
 
         // File uploading
-        $("#UploadDlg").dialog({
+        $("#Upload3DDlg").dialog({
             autoOpen: false,
             height: 380,
             width: 450,
@@ -127,12 +128,12 @@ class Main {
             position: {my: "center", at: "center", of: window},
             buttons: {
                 'Cancel': () => {
-                    $("#UploadDlg").dialog('close');
+                    $("#Upload3DDlg").dialog('close');
                 }
             }
         });
 
-        $("#UploadDlg").submit((e) => {
+        $(".uploadDlg").submit((e) => {
             // Cancel default behavior (abort form action)
             e.preventDefault();
 
@@ -141,27 +142,33 @@ class Main {
                 return;
             }
 
-            // Get file name
-            // let scModelName = e.target[0].files[0].name;
-            // scModelName = scModelName.split(".").shift();
-            const scModelName = "model";
-
-            // Get options
-            const entityIds = Number($("#checkEntityIds").prop('checked'));
-            const sewModel = Number($("#checkSewModel").prop('checked'));
-            const sewingTol = Number($("#sewingTol").val());
-
-            const params = {
-                entityIds: entityIds,
-                sewModel: sewModel,
-                sewingTol: sewingTol
-            }
-
             const formData = new FormData(e.target);
 
-            this._loadModel(params, formData, scModelName);
+            // Get file name
+            let fileName = e.target[0].files[0].name;
+            let fileType = fileName.split('.').pop();
 
-            $('#UploadDlg').dialog('close');
+            if ("hdr" == fileType) {
+                this._loadEnv(formData);
+                $('#UploadEnvDlg').dialog('close');
+            }
+            else {
+                const scModelName = "model";
+
+                // Get options
+                const entityIds = Number($("#checkEntityIds").prop('checked'));
+                const sewModel = Number($("#checkSewModel").prop('checked'));
+                const sewingTol = Number($("#sewingTol").val());
+
+                const params = {
+                    entityIds: entityIds,
+                    sewModel: sewModel,
+                    sewingTol: sewingTol
+                }
+
+                this._loadModel(params, formData, scModelName);
+                $('#Upload3DDlg').dialog('close');
+            }
         });
 
         // Tolerance select
@@ -181,11 +188,11 @@ class Main {
 
         // Load material info from JSON file
         const url = "MaterialLibrary/Catalog/material_list.json";
-        $.getJSON(url, (materialList) => {
-            this._materialList = materialList;
+        $.getJSON(url, (obj) => {
+            this._materialDB = obj;
 
             // Initialize Material type combobox 
-            for (let material in materialList) {
+            for (let material in this._materialDB) {
                 $('#matTypeId').append($('<option>').html(material).val(material));
             }
 
@@ -198,6 +205,48 @@ class Main {
         $('#matTypeId').change((e) => {
             const val = $(e.currentTarget).val();
             this._setMaterialThumbnail(val);
+        });
+
+        // Prepare Lighting Mode dialog
+        $("#lightingModeDlg").dialog({
+            autoOpen: false,
+            height: 420,
+            width: 350,
+            modal: true,
+            title: "Lighting Mode",
+            closeOnEscape: true,
+            position: {my: "left top", at: "left bottom", of: "#toolbarGr"},
+            buttons: {
+                'Close': () => {
+                    $("#lightingModeDlg").dialog('close');
+                }
+            }
+        });
+
+        // Lighting Mode chang event handler
+        $('#lightingModeId').change((e) => {
+            const val = $(e.currentTarget).val();
+            this._setLightingMode(val);
+        });
+
+        // Env file uploading
+        $("#UploadEnvDlg").dialog({
+            autoOpen: false,
+            height: 300,
+            width: 450,
+            modal: true,
+            title: "Env file upload",
+            closeOnEscape: true,
+            position: {my: "center", at: "center", of: window},
+            buttons: {
+                'Cancel': () => {
+                    $("#UploadEnvDlg").dialog('close');
+                }
+            }
+        });
+        $('#envFileSelect').change((e) =>{
+            if (0 < e.target.files.length)
+                $('#envFileSubmit').click();
         });
 
         // Progress bar
@@ -218,7 +267,7 @@ class Main {
 
             switch(command) {
                 case "Upload": {
-                    $('#UploadDlg').dialog('open');
+                    $('#Upload3DDlg').dialog('open');
                 } break;
                 case "Raytracing": {
                     this._invokeRaytracing(command);
@@ -232,6 +281,9 @@ class Main {
                         $('#materialsDlg').dialog('close');
                         this._setDefaultOperators();
                     }
+                } break;
+                case "SetLighting": {
+                    $('#lightingModeDlg').dialog('open');
                 } break;
                 default: {} break;
             }
@@ -263,39 +315,61 @@ class Main {
     }
 
     _setMaterialThumbnail(matType) {
-        $('.materialList').empty();
+        $('#materialList').empty();
 
-        const materials = this._materialList[matType];
+        const materials = this._materialDB[matType];
         // Set thumbnails
         for (let mat of materials) {
             const image = new Image();
             image.src = "MaterialLibrary/Catalog/" + mat.img;
 
-            let $ele = $('<div />', {class:'materialList_thumbnail',title: mat.name,'data-file': mat.redFile});
+            let $ele = $('<div />', {class:'itemList_thumbnail materialItem',title: mat.name,'data-file': mat.redFile});
             $($ele).append(image);
             $($ele).append(mat.name);
 
-            $('.materialList').append($ele);
+            $('#materialList').append($ele);
 
         }
 
         // Set event handler
-        $('.materialList_thumbnail').on('click', (e) => {
-            this._currentMaterialName = e.currentTarget.dataset.file;
+        $('.itemList_thumbnail').on('click', (e) => {
+            const cls = $(e.currentTarget).attr('class');
+            if ('itemList_thumbnail materialItem' == cls) {
+                this._currentMaterialName = e.currentTarget.dataset.file;
 
-            // Highlight selected thumbnail
-            const id = $('.materialList_thumbnail').index(e.currentTarget) + 1
-            $(`.materialList_thumbnail:nth-child(${this._currentMaterialId})`).removeClass('thumbnail-selected');
-            this._currentMaterialId = id;
-            $(`.materialList_thumbnail:nth-child(${this._currentMaterialId})`).addClass('thumbnail-selected')
+                // Highlight selected thumbnail
+                const id = $('.itemList_thumbnail' + '.materialItem').index(e.currentTarget) + 1
+                $(`.itemList_thumbnail:nth-child(${this._currentMaterialId})` + '.materialItem').removeClass('thumbnail-selected');
+                this._currentMaterialId = id;
+                $(`.itemList_thumbnail:nth-child(${this._currentMaterialId})` + '.materialItem').addClass('thumbnail-selected')
+            }
+            else if ('itemList_thumbnail lightingItem' == cls) {
+                // Highlight selected thumbnail
+                const id = $('.itemList_thumbnail' + '.lightingItem').index(e.currentTarget) + 1
+                $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').removeClass('thumbnail-selected');
+                this._currentLightingId = id;
+                $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').addClass('thumbnail-selected')
+
+                const title = $(e.currentTarget).attr('title');
+                if ('Load Environment Map' == title) {
+                    $('#UploadEnvDlg').dialog('open');
+                    $('#envFileSelect').click();
+                }
+                else {
+                    this._setLightingMode(this._currentLightingId - 1);
+                }
+            }
         });
 
         // Set default
-        {
-            this._currentMaterialId = 1;
-            $(`.materialList_thumbnail:nth-child(${this._currentMaterialId})`).addClass('thumbnail-selected')
-            this._currentMaterialName = materials[0].redFile;
-        }
+        // Material list
+        this._currentMaterialId = 1;
+        $(`.itemList_thumbnail:nth-child(${this._currentMaterialId})` + '.materialItem').addClass('thumbnail-selected')
+        this._currentMaterialName = materials[0].redFile;
+
+        // Lighting mode list
+        this._currentLightingId = 1;
+        $(`.itemList_thumbnail:nth-child(${this._currentMaterialId})` + '.lightingItem').addClass('thumbnail-selected')
     }
 
     _loadModel(params, formData, scModelName) {
@@ -337,6 +411,20 @@ class Main {
                     });
                 });
             });
+        });
+    }
+
+    _loadEnv(formData) {
+        $("#loadingImage").show();
+        this._serverCaller.CallServerSubmitFile(formData).then((arr) => {
+            $("#loadingImage").hide();
+            if (0 < arr.length) {
+                if (1 == arr[0]) {
+                    setTimeout(() => {
+                        this._invokeDraw();
+                    }, 1000);
+                }
+            }
         });
     }
 
@@ -409,7 +497,7 @@ class Main {
                             this._viewer.model.setNodesOpacity([root], 0);
                         }
 
-                        if (100 <= renderingProgress) {
+                        if (100 == renderingProgress) {
                             this._clearRaytracing();
                             $('#progress').hide();
                             $('[data-command="Raytracing"]').data("on", false).css("background-color", "gainsboro");
@@ -442,6 +530,15 @@ class Main {
 
         this._serverCaller.CallServerPost("SetMaterial", params).then((arr) => {
             this._viewer.model.resetModelHighlight();
+        });
+    }
+
+    _setLightingMode(lightingId) {
+        const params = {
+            lightingId: lightingId
+        }
+
+        this._serverCaller.CallServerPost("SetLighting", params).then((arr) => {
         });
     }
 }

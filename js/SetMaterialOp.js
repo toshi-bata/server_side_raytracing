@@ -2,7 +2,7 @@ class SetMaterialOperator {
     constructor(viewer, owner) {
         this._viewer = viewer;
         this._owner = owner;
-        this._ptFirst;
+        this._ptFirst = null;
     }
 
     onMouseDown(event) {
@@ -10,8 +10,11 @@ class SetMaterialOperator {
     }
 
     onMouseUp(event) {
+        if (null == this._ptFirst) return;
+
         const ptCurrent = event.getPosition();
         const pointDistance = Communicator.Point2.subtract(this._ptFirst, ptCurrent).length();
+        this._ptFirst = null;
 
         if (5 > pointDistance && event.getButton() == Communicator.Button.Left) {
             const pickConfig = new Communicator.PickConfig(Communicator.SelectionMask.Face);

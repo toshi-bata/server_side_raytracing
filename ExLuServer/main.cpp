@@ -519,21 +519,51 @@ answer_to_connection(void* cls,
                 sprintf(workingDir, "%s%s", s_pcWorkingDir, con_info->sessionId);
                 sprintf(scDir, "%s%s", s_pcScModelsDir, con_info->sessionId);
                 
+                char lowExt[256];
+                char fileType[256];
+                getLowerExtention(s_pcModelName, lowExt, fileType);
+
+                std::vector<float> floatArr;
+                if (0 == strcmp(lowExt, "hdr"))
+                {
+                    // Load environment map file
+                    if (0 == m_mpLuminateBridge.count(con_info->sessionId))
+                    {
+                        floatArr.push_back(0);
+                        con_info->answerstring = response_error;
+                        con_info->answercode = MHD_HTTP_OK;
+                    }
+                    else
+                    {
+                        HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
+
+                        pHCLuminateBridge->resetFrame();
+                        pHCLuminateBridge->setEnvMapLightEnvironment(filePath, true, RED::Color::WHITE);
+
+                        floatArr.push_back(1);
+                        con_info->answerstring = response_success;
+                        con_info->answercode = MHD_HTTP_OK;
+                    }
+                }
+                else
+                {
+                    // Load 3D CAD file
 #ifndef _WIN32
                 if (0 != mkdir(scDir, 0777))
 #else
-                if (0 != mkdir(scDir))
+                    if (0 != mkdir(scDir))
 #endif
-                {
-                    con_info->answerstring = response_fileioerror;
-                    con_info->answercode = MHD_HTTP_INTERNAL_SERVER_ERROR;
+                    {
+                        con_info->answerstring = response_fileioerror;
+                        con_info->answercode = MHD_HTTP_INTERNAL_SERVER_ERROR;
+                    }
+
+                    printf("converting...\n");
+
+                    floatArr = pExProcess->LoadFile(con_info->sessionId, filePath, scPath);
+                    con_info->answerstring = response_success;
+                    con_info->answercode = MHD_HTTP_OK;
                 }
-
-                printf("converting...\n");
-
-                std::vector<float> floatArr = pExProcess->LoadFile(con_info->sessionId, filePath, scPath);
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
 
                 // Delete uploaded file and working dir
 #ifndef _WIN32
@@ -752,6 +782,34 @@ answer_to_connection(void* cls,
                 redfilename.Add(RED::String(redFile.data()));
 
                 pHCLuminateBridge->applyMaterial(nodeName.data(), redfilename, (bool)overrideMaterial, (bool)preserveColor);
+
+                con_info->answerstring = response_success;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/SetLighting"))
+        {
+            if (0 == m_mpLuminateBridge.count(con_info->sessionId))
+            {
+                con_info->answerstring = response_error;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+            else
+            {
+                HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
+
+                int lightingId;
+                if (!paramStrToInt("lightingId", lightingId)) return MHD_NO;
+
+                switch (lightingId)
+                {
+                case 0: pHCLuminateBridge->setDefaultLightEnvironment(); break;
+                case 1: pHCLuminateBridge->setSunSkyLightEnvironment(); break;
+                break;
+                default: break;
+                }
 
                 con_info->answerstring = response_success;
                 con_info->answercode = MHD_HTTP_OK;

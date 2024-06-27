@@ -60,9 +60,10 @@
             <input title="Upload 3D CAD file" class="toolbarBtn" data-command="Upload" type="image" name="image_button" src="css/images/upload.png" style="margin-right: 10px;" />
             <input title="Raytracing" class="toolbarBtn toggleBtn" data-command="Raytracing" type="image" name="image_button" src="css/images/raytracing.png" />
             <input title="Set material" class="toolbarBtn toggleBtn" data-command="SetMaterial" type="image" name="image_button" src="css/images/material.png" />
+            <input title="Lighting Mode" class="toolbarBtn" data-command="SetLighting" type="image" name="image_button" src="css/images/lighting.png" />
         </div>
 
-        <form id="UploadDlg" action="" method="post" enctype="multipart/form-data" style="display:none;">
+        <form id="Upload3DDlg" class="uploadDlg" action="" method="post" enctype="multipart/form-data" style="display:none;">
             <input name="file" type="file"><p></p>
             <div>
                 <input type="checkbox" id="checkEntityIds" checked>
@@ -91,6 +92,13 @@
             </div>
         </form>
 
+        <form id="UploadEnvDlg" class="uploadDlg" action="" method="post" enctype="multipart/form-data" style="display:none;">
+            <input id="envFileSelect" name="file" type="file" accept="image/*,.hdr"><p></p>
+            <div style="text-align: right;">
+                <input id="envFileSubmit" type="submit" value="Upload">
+            </div>
+        </form>
+
         <form id="materialsDlg" style="display:none;">
             <div>
                 <input type="checkbox" id="checkOverrideMaterial">
@@ -104,7 +112,22 @@
                 <label for="matTypeId" style="margin-right: 5px;">Material Type:</label>
                 <select id="matTypeId"></select>
             </div>
-            <div class="materialList"></div>
+            <div id="materialList" class="itemList"></div>
+        </form>
+
+        <form id="lightingModeDlg" style="display:none;">
+            <div>
+                <label for="lightingModeId" style="margin-right: 5px;">Lighting Mode:</label>
+                <select id="lightingModeId">
+                    <option value="0">Default</option>
+                    <option value="1">Sun Sky Model</option>
+                </select>
+            </div>
+            <div id="lightingList" class="itemList">
+                <div class="itemList_thumbnail lightingItem" title="Default"><img src="Lighting/Default.png">Default</div>
+                <div class="itemList_thumbnail lightingItem" title="Sun Sky Model"><img src="Lighting/SunSkyModel.png">Sun Sky Model</div>
+                <div class="itemList_thumbnail lightingItem" title="Load Environment Map"><img src="Lighting/Load.png">Load HDRI file</div>
+            </div>
         </form>
 
         <div id="progress" class="centerBotomBlock" style="display:none;">

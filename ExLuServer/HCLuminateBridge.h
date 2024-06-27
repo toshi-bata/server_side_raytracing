@@ -197,6 +197,11 @@ namespace HC_luminate_bridge {
 		RED_RC setDefaultLightEnvironment();
 
 		/**
+		 * Sets current lighting environment as a physical sun/sky model.
+		 */
+		RED_RC setSunSkyLightEnvironment();
+
+		/**
 		 * Sets current lighting environment as environment map.
 		 * @param[in] a_imageFilepath Filepath of the env map file to use.
 		 * @param[in] a_showImage Whether to show the image, if not it will only act as sky light.

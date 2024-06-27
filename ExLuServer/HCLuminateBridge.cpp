@@ -125,7 +125,7 @@ namespace HC_luminate_bridge {
 #ifdef _LIN32
         rc = createRedWindow(a_osHandle, m_windowWidth, m_windowHeight, a_display, a_screen, a_visual, m_window);
 #else
-        rc = createRedWindow(a_osHandle, m_windowWidth, m_windowHeight, m_window);
+        rc = createRedWindow(a_osHandle, 600, 400, m_window);
 #endif
 
         if (rc != RED_OK)
@@ -189,7 +189,7 @@ namespace HC_luminate_bridge {
         // need to add it anywhere.
         //////////////////////////////////////////
         rc = createDefaultModel(m_defaultLightingModel);
-        //rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
+        rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
 
         if (a_environmentMapFilepath.empty())
             rc = setDefaultLightEnvironment();
@@ -496,6 +496,17 @@ namespace HC_luminate_bridge {
         resetFrame();
 
         return RED_RC();
+    }
+
+    RED_RC HCLuminateBridge::setSunSkyLightEnvironment()
+    {
+        removeCurrentLightingEnvironment();
+
+        m_lightingModel = LightingModel::PhysicalSunSky;
+        addSunSkyModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_sunSkyLightingModel);
+        resetFrame();
+
+        return RED_OK;
     }
 
     RED_RC HCLuminateBridge::setEnvMapLightEnvironment(std::string const& a_imageFilepath,
