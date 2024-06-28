@@ -511,7 +511,7 @@ namespace HC_luminate_bridge {
 
     RED_RC HCLuminateBridge::setEnvMapLightEnvironment(std::string const& a_imageFilepath,
         bool a_showImage,
-        RED::Color const& a_backgroundColor)
+        RED::Color const& a_backgroundColor, const char* thumbFilePath)
     {
         removeCurrentLightingEnvironment();
 
@@ -527,6 +527,32 @@ namespace HC_luminate_bridge {
         addEnvironmentMapModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
         resetFrame();
 
+        if (NULL != thumbFilePath)
+        {
+            RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+            RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+
+            // Auxiliary VRL creation
+            RED::IWindow* iwindow = m_window->As<RED::IWindow>();
+            RED::Object* auxvrl;
+            rc = iwindow->CreateVRL(auxvrl, 320, 320, RED::FMT_RGBA, true, iresourceManager->GetState());
+
+            m_iVRL = 2;
+            RED::Object* newCamera = nullptr;
+            rc = createCamera(m_window, 320, 320, newCamera);
+            m_iVRL = 1;
+
+            addEnvironmentMapModel(m_window, 2, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
+
+            draw();
+            draw();
+            draw();
+
+            RED::IViewpointRenderList* auxVRL = auxvrl->As<RED::IViewpointRenderList>();
+            RED::Object* renderimg = auxVRL->GetRenderImage();
+
+            rc = RED::ImageTools::Save(renderimg, false, thumbFilePath, false, true, 1.0);
+        }
         return rc;
     }
 

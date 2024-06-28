@@ -537,8 +537,15 @@ answer_to_connection(void* cls,
                     {
                         HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
 
+                        char thumbnailPath[FILENAME_MAX];
+#ifndef _WIN32
+                        sprintf(thumbnailPath, "%sLighting/EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+#else
+                        sprintf(thumbnailPath, "%sLighting\\EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+#endif
+
                         pHCLuminateBridge->resetFrame();
-                        pHCLuminateBridge->setEnvMapLightEnvironment(filePath, true, RED::Color::WHITE);
+                        pHCLuminateBridge->setEnvMapLightEnvironment(filePath, true, RED::Color::WHITE, thumbnailPath);
 
                         floatArr.push_back(1);
                         con_info->answerstring = response_success;
@@ -807,6 +814,7 @@ answer_to_connection(void* cls,
                 {
                 case 0: pHCLuminateBridge->setDefaultLightEnvironment(); break;
                 case 1: pHCLuminateBridge->setSunSkyLightEnvironment(); break;
+                case 3: pHCLuminateBridge->setEnvMapLightEnvironment("", true, RED::Color::WHITE); break;
                 break;
                 default: break;
                 }

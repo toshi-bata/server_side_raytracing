@@ -207,6 +207,9 @@ class Main {
             this._setMaterialThumbnail(val);
         });
 
+        // Lighting thumbnail click event handler
+        this._setLightingThumbClickHandler();
+
         // Prepare Lighting Mode dialog
         $("#lightingModeDlg").dialog({
             autoOpen: false,
@@ -222,13 +225,7 @@ class Main {
                 }
             }
         });
-
-        // Lighting Mode chang event handler
-        $('#lightingModeId').change((e) => {
-            const val = $(e.currentTarget).val();
-            this._setLightingMode(val);
-        });
-
+        
         // Env file uploading
         $("#UploadEnvDlg").dialog({
             autoOpen: false,
@@ -334,30 +331,18 @@ class Main {
         // Set event handler
         $('.itemList_thumbnail').on('click', (e) => {
             const cls = $(e.currentTarget).attr('class');
-            if ('itemList_thumbnail materialItem' == cls) {
+            if (cls.match('materialItem')) {
                 this._currentMaterialName = e.currentTarget.dataset.file;
 
                 // Highlight selected thumbnail
                 const id = $('.itemList_thumbnail' + '.materialItem').index(e.currentTarget) + 1
+
+                if (this._currentMaterialId == id)
+                    return;
+
                 $(`.itemList_thumbnail:nth-child(${this._currentMaterialId})` + '.materialItem').removeClass('thumbnail-selected');
                 this._currentMaterialId = id;
                 $(`.itemList_thumbnail:nth-child(${this._currentMaterialId})` + '.materialItem').addClass('thumbnail-selected')
-            }
-            else if ('itemList_thumbnail lightingItem' == cls) {
-                // Highlight selected thumbnail
-                const id = $('.itemList_thumbnail' + '.lightingItem').index(e.currentTarget) + 1
-                $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').removeClass('thumbnail-selected');
-                this._currentLightingId = id;
-                $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').addClass('thumbnail-selected')
-
-                const title = $(e.currentTarget).attr('title');
-                if ('Load Environment Map' == title) {
-                    $('#UploadEnvDlg').dialog('open');
-                    $('#envFileSelect').click();
-                }
-                else {
-                    this._setLightingMode(this._currentLightingId - 1);
-                }
             }
         });
 
@@ -416,13 +401,53 @@ class Main {
 
     _loadEnv(formData) {
         $("#loadingImage").show();
+        this._clearRaytracing();
+
         this._serverCaller.CallServerSubmitFile(formData).then((arr) => {
             $("#loadingImage").hide();
             if (0 < arr.length) {
                 if (1 == arr[0]) {
-                    setTimeout(() => {
-                        this._invokeDraw();
-                    }, 1000);
+                    // Add env map thumbnail 
+                    const image = new Image();
+                    image.src = "Lighting/EnvMapThumb-" + this._sessionId + ".png";
+                    let $ele = $('<div />', {class:'itemList_thumbnail lightingItem thumbnail-selected',title: 'Env Map'});
+                    $($ele).append(image);
+                    $($ele).append("Env Map");
+                    $('#lightingList').append($ele);
+
+                    this._currentLightingId = 4;
+
+                    this._setLightingThumbClickHandler();
+
+                    this._invokeDraw();
+                }
+            }
+        });
+    }
+
+    _setLightingThumbClickHandler() {
+        // Lighting thumbnail click event handler
+        $('.itemList_thumbnail').on('click', (e) => {
+            const cls = $(e.currentTarget).attr('class');
+            if (cls.match('lightingItem')) {
+                // Highlight selected thumbnail
+                const id = $('.itemList_thumbnail' + '.lightingItem').index(e.currentTarget) + 1
+
+                if (this._currentLightingId == id)
+                    return;
+
+                $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').removeClass('thumbnail-selected');
+
+                const title = $(e.currentTarget).attr('title');
+                if ('Load Environment Map' == title) {
+                    $('#UploadEnvDlg').dialog('open');
+                    $('#envFileSelect').click();
+                }
+                else {
+                    this._currentLightingId = id;
+                    $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').addClass('thumbnail-selected');
+
+                    this._setLightingMode(this._currentLightingId - 1);
                 }
             }
         });
