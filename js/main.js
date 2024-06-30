@@ -282,6 +282,12 @@ class Main {
                 case "SetLighting": {
                     $('#lightingModeDlg').dialog('open');
                 } break;
+                case "Download": {
+                    const serverName = this._sessionId + ".png";
+                    const downloadName = "image.png";
+                    this._downloadImage(serverName, downloadName);
+
+                } break;
                 default: {} break;
             }
         });
@@ -565,5 +571,35 @@ class Main {
 
         this._serverCaller.CallServerPost("SetLighting", params).then((arr) => {
         });
+    }
+
+    _downloadImage(from, to) {
+        let oReq = new XMLHttpRequest(),
+            a = document.createElement('a'), file;
+        let versioningNum = new Date().getTime()
+        oReq.open('GET', from + "?" + versioningNum, true);
+        oReq.responseType = 'blob';
+        oReq.onload = (oEvent) => {
+            var blob = oReq.response;
+            if (window.navigator.msSaveBlob) {
+                // IE or Edge
+                window.navigator.msSaveBlob(blob, filename);
+            }
+            else {
+                // Other
+                var objectURL = window.URL.createObjectURL(blob);
+                var link = document.createElement("a");
+                document.body.appendChild(link);
+                link.href = objectURL;
+                link.download = to;
+                link.click();
+                document.body.removeChild(link);
+            }
+            // Delete download source file in server
+            const params = {};
+            this._serverCaller.CallServerPost("DownloadImage", params);
+            $("#loadingImage").hide();
+        };
+        oReq.send();
     }
 }

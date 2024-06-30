@@ -825,6 +825,22 @@ answer_to_connection(void* cls,
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
+        else if (0 == strcmp(url, "/DownloadImage"))
+        {
+            if (0 == m_mpLuminateBridge.count(con_info->sessionId))
+            {
+                con_info->answerstring = response_error;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+            else
+            {
+                HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
+                con_info->answerstring = response_success;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
     }
 
     return MHD_NO;
