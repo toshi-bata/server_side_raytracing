@@ -899,11 +899,11 @@ namespace HC_luminate_bridge {
         RED::Object* result = RED::Factory::CreateInstance(CID_REDMeshShape);
         RED::IMeshShape* imesh = result->As<RED::IMeshShape>();
 
-        std::vector<float> points;
-        for (int i = 0; i < a_meshData.m_uiCoordSize; i++)
-            points.push_back(a_meshData.m_pdCoords[i]);
+        std::vector<float> points(a_meshData.m_pdCoords, a_meshData.m_pdCoords + a_meshData.m_uiCoordSize);
 
         rc = imesh->SetArray(RED::MCL_VERTEX, points.data(), a_meshData.m_uiCoordSize / 3, 3, RED::MFT_FLOAT, a_state);
+
+        std::vector<float>().swap(points);
 
         int triangleCount = 0;
         RED::Vector<int> indices;
@@ -920,10 +920,11 @@ namespace HC_luminate_bridge {
 
         rc = imesh->AddTriangles(&indices[0], triangleCount, a_state);
 
-        std::vector<float> normols;
-        for (int i = 0; i < a_meshData.m_uiNormalSize; i++)
-            normols.push_back(a_meshData.m_pdNormals[i]);
+        std::vector<float> normols(a_meshData.m_pdNormals, a_meshData.m_pdNormals + a_meshData.m_uiNormalSize);
+
         rc = imesh->SetArray(RED::MCL_NORMAL, normols.data(), a_meshData.m_uiNormalSize / 3, 3, RED::MFT_FLOAT, a_state);
+
+        std::vector<float>().swap(normols);
 
         // Luminate need UV coordinates so we will build them
         rc = imesh->BuildTextureCoordinates(RED::MESH_CHANNEL::MCL_TEX0, RED::MTCM_BOX, RED::Matrix::IDENTITY, a_state);
