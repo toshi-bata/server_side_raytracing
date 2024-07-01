@@ -198,8 +198,8 @@ namespace HC_luminate_bridge {
                 a_environmentMapFilepath.c_str(), RED::Color::WHITE, true, m_environmentMapLightingModel);
             rc = setEnvMapLightEnvironment(a_environmentMapFilepath, true, RED::Color::WHITE);
         }
-        checkDrawHardware(m_window);
-        return true;
+        
+        return rc == RED_OK;
     }
 
     FrameStatistics HCLuminateBridge::getFrameStatistics() { return m_lastFrameStatistics; }
@@ -361,8 +361,6 @@ namespace HC_luminate_bridge {
         m_camera = newCamera;
 
         return syncLuminateCamera(a_cameraInfo) == RED_OK;
-        
-        return true;
     }
 
     CameraInfo HCLuminateBridge::creteCameraInfo(double* a_target, double* a_up, double* a_position, 
@@ -388,7 +386,10 @@ namespace HC_luminate_bridge {
         // Get camera projection mode
         //////////////////////////////////////////
 
-        ProjectionMode projectionMode = ProjectionMode::Perspective;
+        ProjectionMode projectionMode = ProjectionMode::Orthographic;
+
+        if(1 == a_projection)
+            projectionMode = ProjectionMode::Perspective;
 
         //////////////////////////////////////////
         // Return result.
@@ -923,6 +924,15 @@ namespace HC_luminate_bridge {
         for (int i = 0; i < a_meshData.m_uiNormalSize; i++)
             normols.push_back(a_meshData.m_pdNormals[i]);
         rc = imesh->SetArray(RED::MCL_NORMAL, normols.data(), a_meshData.m_uiNormalSize / 3, 3, RED::MFT_FLOAT, a_state);
+
+        // Luminate need UV coordinates so we will build them
+        rc = imesh->BuildTextureCoordinates(RED::MESH_CHANNEL::MCL_TEX0, RED::MTCM_BOX, RED::Matrix::IDENTITY, a_state);
+
+        // Create the vertex information used for shading tangent-space generation.
+        // The channels mentionned here must match the SetupRealisticMaterial bump channels.
+        // We reserve MCL_TEX0 for 3DF texture coordinates (if any, so use another channel)         
+        rc = imesh->BuildTextureCoordinates(RED::MCL_TEX7, RED::MTCM_BOX, RED::Matrix::IDENTITY, a_state);
+        rc = imesh->BuildTangents(RED::MCL_USER0, RED::MCL_TEX7, a_state);
 
         return result;
     }
