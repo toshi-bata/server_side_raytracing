@@ -223,6 +223,24 @@ bool paramStrToXYZ(const char* key, double*& dXYZ)
     return true;
 }
 
+bool paramStrToDblArr(const char* key, double*& dblArr)
+{
+    std::string sVal = s_mParams[std::string(key)];
+    if (sVal.empty()) return false;
+
+    std::vector<std::string> strArr;
+    split(sVal.c_str(), ",", strArr);
+
+    int entCnt = strArr.size();
+
+    dblArr = new double[entCnt];
+
+    for (int i = 0; i < entCnt; i++)
+        dblArr[i] = std::atof(strArr[i].c_str());
+
+    return true;
+}
+
 bool paramStrToChr(const char *key, char &cha)
 {
 	std::string sVal = s_mParams[std::string(key)];
@@ -818,6 +836,28 @@ answer_to_connection(void* cls,
                 break;
                 default: break;
                 }
+
+                con_info->answerstring = response_success;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/SetRootTransform"))
+        { 
+            if (0 == m_mpLuminateBridge.count(con_info->sessionId))
+            {
+                con_info->answerstring = response_error;
+                con_info->answercode = MHD_HTTP_OK;
+            }
+            else
+            {
+                HCLuminateBridge* pHCLuminateBridge = m_mpLuminateBridge[con_info->sessionId];
+
+                double* matrix;
+                if (!paramStrToDblArr("matrix", matrix)) return MHD_NO;
+
+                pHCLuminateBridge->syncRootTransform(matrix);
 
                 con_info->answerstring = response_success;
                 con_info->answercode = MHD_HTTP_OK;

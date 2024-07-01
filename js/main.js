@@ -324,6 +324,43 @@ class Main {
             change: (e, ui) => {
             },
         });
+
+        // Up vector
+        $("#upVector").val("Z");
+        $('#upVector').change((e) => {
+            this._clearRaytracing();
+        
+            const upVect = $(e.currentTarget).val();
+            const root = this._viewer.model.getAbsoluteRootNode();
+
+            // reset modelling matrix
+            this._viewer.model.resetNodeMatrixToInitial(root);
+
+            let matrix = new Communicator.Matrix();
+            switch (upVect) {
+            case "X": matrix = Communicator.Matrix.yAxisRotation(90); break;
+            case "Y": matrix = Communicator.Matrix.xAxisRotation(-90); break;
+            case "Z": break;
+            case "-X": matrix = Communicator.Matrix.yAxisRotation(-90); break;
+            case "-Y": matrix = Communicator.Matrix.xAxisRotation(90); break;
+            case "-Z": matrix = Communicator.Matrix.xAxisRotation(180);break;
+            }
+
+            // set root matrix
+            this._viewer.model.setNodeMatrix(root, matrix);
+
+            let matArr = [];
+            for (let i = 0; i < 16; i++) {
+                matArr.push(matrix.m[i]);
+            }
+            const params = {
+                matrix: matArr
+            }
+
+            this._serverCaller.CallServerPost("SetRootTransform", params).then(() => {
+                this._invokeDraw();
+            });
+        });
     }
 
     _setDefaultOperators() {

@@ -122,7 +122,6 @@ namespace HC_luminate_bridge {
 
 		// segment update
 		bool m_selectedSegmentTransformIsDirty;
-		bool m_rootTransformIsDirty;
 
 		// Static Fields:
 		// --------------
@@ -223,6 +222,8 @@ namespace HC_luminate_bridge {
 		void stopFrameTracing();
 
 		void applyMaterial(const char* a_node_name, RED::String a_redfilename, bool bOverrideMaterial, bool bPreserveColor);
+
+		RED_RC syncRootTransform(double* matrix);
 
 	private:
 		/**

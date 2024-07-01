@@ -30,7 +30,7 @@ namespace HC_luminate_bridge {
         m_frameIsComplete(false), m_newFrameIsRequired(true), m_axisTriad(),  m_bSyncCamera(false),
         m_lightingModel(LightingModel::No), m_windowWidth(0), m_windowHeight(0), m_defaultLightingModel(), m_sunSkyLightingModel(),
         m_environmentMapLightingModel(), m_frameTracingMode(RED::FTF_PATH_TRACING), m_selectedSegmentTransformIsDirty(false),
-        m_rootTransformIsDirty(false), m_iVRL(1)
+        m_iVRL(1)
     {
     }
 
@@ -247,11 +247,6 @@ namespace HC_luminate_bridge {
         // update segments if necessary
         //if (m_selectedSegmentTransformIsDirty) {
         //    updateSelectedSegmentTransform();
-        //}
-
-        // update root transform if necessary
-        //if (m_rootTransformIsDirty) {
-        //    syncRootTransform();
         //}
 
         if (m_bSyncCamera)
@@ -749,6 +744,28 @@ namespace HC_luminate_bridge {
                 resetFrame();
             }
         }
+    }
+
+    RED_RC HCLuminateBridge::syncRootTransform(double* matrix)
+    {
+        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+        LuminateSceneInfoPtr sceneInfo = m_conversionDataPtr;
+        RED::ITransformShape* itransform = sceneInfo->rootTransformShape->As<RED::ITransformShape>();
+
+        // Apply transform matrix.
+        RED::Matrix redMatrix;
+        redMatrix.SetColumnMajorMatrix(matrix);
+
+        // Restore left handedness transform.
+        if (m_conversionDataPtr->viewHandedness == Handedness::LeftHanded) {
+            //redMatrix = HoopsLuminateBridge::s_leftHandedToRightHandedMatrix * redMatrix;
+        }
+
+        RC_CHECK(itransform->SetMatrix(&redMatrix, iresourceManager->GetState()));
+            resetFrame();
+
+        return RED_RC();
     }
 
     RealisticMaterialInfo getSegmentMaterialInfo(MeshPropaties meshProps,
