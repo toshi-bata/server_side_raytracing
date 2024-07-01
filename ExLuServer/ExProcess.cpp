@@ -4,6 +4,8 @@
 #include <iterator>
 #include <sstream>
 
+static double s_dUnit = 1.0;
+
 A3DVector3dData cross_product(const A3DVector3dData& X, const A3DVector3dData& Y)
 {
     A3DVector3dData Z;
@@ -26,24 +28,24 @@ int get_matrix(const A3DMiscTransformation* transfo, double* matrix)
             return 1;
         const auto sZVector = cross_product(data.m_sXVector, data.m_sYVector);
         const double dMirror = (data.m_ucBehaviour & kA3DTransformationMirror) ? -1. : 1.;
-        matrix[12] = data.m_sOrigin.m_dX;
-        matrix[13] = data.m_sOrigin.m_dY;
-        matrix[14] = data.m_sOrigin.m_dZ;
+        matrix[12] = data.m_sOrigin.m_dX * s_dUnit;
+        matrix[13] = data.m_sOrigin.m_dY * s_dUnit;
+        matrix[14] = data.m_sOrigin.m_dZ * s_dUnit;
         matrix[15] = 1.;
 
-        matrix[0] = data.m_sXVector.m_dX * data.m_sScale.m_dX;
-        matrix[1] = data.m_sXVector.m_dY * data.m_sScale.m_dX;
-        matrix[2] = data.m_sXVector.m_dZ * data.m_sScale.m_dX;
+        matrix[0] = data.m_sXVector.m_dX * data.m_sScale.m_dX * s_dUnit;
+        matrix[1] = data.m_sXVector.m_dY * data.m_sScale.m_dX * s_dUnit;
+        matrix[2] = data.m_sXVector.m_dZ * data.m_sScale.m_dX * s_dUnit;
         matrix[3] = 0.;
 
-        matrix[4] = data.m_sYVector.m_dX * data.m_sScale.m_dY;
-        matrix[5] = data.m_sYVector.m_dY * data.m_sScale.m_dY;
-        matrix[6] = data.m_sYVector.m_dZ * data.m_sScale.m_dY;
+        matrix[4] = data.m_sYVector.m_dX * data.m_sScale.m_dY * s_dUnit;
+        matrix[5] = data.m_sYVector.m_dY * data.m_sScale.m_dY * s_dUnit;
+        matrix[6] = data.m_sYVector.m_dZ * data.m_sScale.m_dY * s_dUnit;
         matrix[7] = 0.;
 
-        matrix[8] = dMirror * sZVector.m_dX * data.m_sScale.m_dZ;
-        matrix[9] = dMirror * sZVector.m_dY * data.m_sScale.m_dZ;
-        matrix[10] = dMirror * sZVector.m_dZ * data.m_sScale.m_dZ;
+        matrix[8] = dMirror * sZVector.m_dX * data.m_sScale.m_dZ * s_dUnit;
+        matrix[9] = dMirror * sZVector.m_dY * data.m_sScale.m_dZ * s_dUnit;
+        matrix[10] = dMirror * sZVector.m_dZ * data.m_sScale.m_dZ * s_dUnit;
         matrix[11] = 0.;
 
         if (A3DMiscCartesianTransformationGet(nullptr, &data))
@@ -281,14 +283,6 @@ void ExProcess::traverseTree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_nod
             if (0 == mesh_data.m_uiCoordSize || 0 == mesh_data.m_uiFaceSize)
                 return;
 
-            double x, y, z;
-            for (int i = 0; i < mesh_data.m_uiCoordSize / 3; i++)
-            {
-                x = mesh_data.m_pdCoords[i * 3 + 0];
-                y = mesh_data.m_pdCoords[i * 3 + 1];
-                z = mesh_data.m_pdCoords[i * 3 + 2];
-            }
-
             MeshPropaties meshProps;
             meshProps.meshData = mesh_data;
 
@@ -337,6 +331,12 @@ std::vector<MeshPropaties> ExProcess::GetModelMesh(const char* session_id)
         return m_aMeshProps;
 
     A3DAsmModelFile* pModelFile = m_mModelFile[session_id];
+
+    // Get unit
+    A3DAsmModelFileData sData;
+    A3D_INITIALIZE_DATA(A3DAsmModelFileData, sData);
+    A3DAsmModelFileGet(pModelFile, &sData);
+    s_dUnit = sData.m_dUnit;
 
     // Traverse model
     A3DTree* tree = 0;
