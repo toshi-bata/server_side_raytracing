@@ -21,6 +21,7 @@ class Main {
         this._currentMaterialName;
         this._currentMaterialId;
         this._currentLightingId;
+        this._isAutoSlide;
     }
 
     start (port, viewerMode, modelName, reverseProxy) {
@@ -58,7 +59,9 @@ class Main {
                 camera: (camera) => {
                     const root = this._viewer.model.getAbsoluteRootNode();
                     this._viewer.model.resetNodesOpacity([root]);
-                    $('#backgroundImg').attr('src', 'css/images/default_background.png');
+                    if (this._isAutoSlide) {
+                        $('#backgroundImg').attr('src', 'css/images/default_background.png');
+                    }
                     $('#progress').hide();
 
                     let isOn = $('[data-command="Raytracing"]').data("on");
@@ -305,6 +308,22 @@ class Main {
         // Toolbar
         $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
 
+        // Slider
+        $("#opacitySlider").slider({
+            value: 1,
+            min: 0,
+            max: 1,
+            step: 0.01,
+            slide: (e, ui) => {
+                this._isAutoSlide = false;
+
+                const opacity = ui.value;
+                const root = this._viewer.model.getAbsoluteRootNode();
+                this._viewer.model.setNodesOpacity([root], opacity);
+            },
+            change: (e, ui) => {
+            },
+        });
     }
 
     _setDefaultOperators() {
@@ -503,6 +522,7 @@ class Main {
     _invokeDraw() {
         $("#progressBar").progressbar("value", 0);
         $('#progress').show();
+        this._isAutoSlide = true;
 
         this._timerId = setInterval(() => {
             if (false == this._isBusy) {
@@ -521,11 +541,18 @@ class Main {
                         const root = this._viewer.model.getAbsoluteRootNode();
                         const ratio = 5;
                         if (ratio >= renderingProgress) {
-                            const opacity = (ratio - renderingProgress) / ratio;
-                            this._viewer.model.setNodesOpacity([root], opacity);
+
+                            if (this._isAutoSlide) {
+                                const opacity = (ratio - renderingProgress) / ratio;
+                                this._viewer.model.setNodesOpacity([root], opacity);
+                                $("#opacitySlider").slider("value",opacity);
+                            }
                         }
                         else {
-                            this._viewer.model.setNodesOpacity([root], 0);
+                            if (this._isAutoSlide) {
+                                this._viewer.model.setNodesOpacity([root], 0);
+                                $("#opacitySlider").slider("value",0);
+                            }
                         }
 
                         if (100 == renderingProgress) {

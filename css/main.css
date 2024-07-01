@@ -70,3 +70,9 @@ body {
 #loadEnvform {
     position: absolute;
 }
+#opacitySlider {
+    position: absolute;
+    width: 400px;
+    left: 20px;
+    bottom: 80px;
+}

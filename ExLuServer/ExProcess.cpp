@@ -281,6 +281,14 @@ void ExProcess::traverseTree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_nod
             if (0 == mesh_data.m_uiCoordSize || 0 == mesh_data.m_uiFaceSize)
                 return;
 
+            double x, y, z;
+            for (int i = 0; i < mesh_data.m_uiCoordSize / 3; i++)
+            {
+                x = mesh_data.m_pdCoords[i * 3 + 0];
+                y = mesh_data.m_pdCoords[i * 3 + 1];
+                z = mesh_data.m_pdCoords[i * 3 + 2];
+            }
+
             MeshPropaties meshProps;
             meshProps.meshData = mesh_data;
 
