@@ -61,48 +61,18 @@
 
             <input title="Raytracing" class="toolbarBtn toggleBtn" data-command="Raytracing" type="image" name="image_button" src="css/images/raytracing.png" />
             <input title="Set material" class="toolbarBtn toggleBtn" data-command="SetMaterial" type="image" name="image_button" src="css/images/material.png" />
-            <input title="Lighting Mode" class="toolbarBtn" data-command="SetLighting" type="image" name="image_button" src="css/images/lighting.png" style="margin-right: 10px;" />
+            <input title="Lighting Mode" class="toolbarBtn normalBtn" data-command="SetLighting" type="image" name="image_button" src="css/images/lighting.png" />
+            <input title="Up Vector" class="toolbarBtn normalBtn" data-command="UpVector" type="image" name="image_button" src="css/images/up.png" style="margin-right: 10px;" />
 
-            <label for="upVector" style="margin-right: 5px;">Up Vector:</label>
-            <select id="upVector" style="margin-right: 10px;">
-                <option value="X">X</option>
-                <option value="Y">Y</option>
-                <option value="Z">Z</option>
-                <option value="-X">-X</option>
-                <option value="-Y">-Y</option>
-                <option value="-Z">-Z</option>
-            </select>
-
-            <input title="Download image" class="toolbarBtn" data-command="Download" type="image" name="image_button" src="css/images/download.png" />
+            <input title="Download image" class="toolbarBtn normalBtn" data-command="Download" type="image" name="image_button" src="css/images/download.png" />
         </div>
         <div class="slider" id="opacitySlider"></div>
 
         <form id="Upload3DDlg" class="uploadDlg" action="" method="post" enctype="multipart/form-data" style="display:none;">
-            <input name="file" type="file"><p></p>
-            <div>
-                <input type="checkbox" id="checkEntityIds" checked>
-                <label for="checkEntityIds">Add face and edge IDs</label>
-            </div>
-            <div>
-                <input type="checkbox" id="checkSewModel">
-                <label for="checkSewModel">Sew Model</label>
-            </div>
-            <div>
-                <label for="sewingTol" style="margin-right: 5px;">Sewing Tolerance:</label>
-                <select id="sewingTol">
-                    <option value="0.1">0.1</option>
-                    <option value="0.01">0.01</option>
-                    <option value="0.001">0.001</option>
-                    <option value="0.0001">0.0001</option>
-                    <option value="0.00001">0.00001</option>
-                    <option value="0.000001">0.000001</option>
-                    <option value="0.0000001">0.0000001</option>
-                    <option value="0.00000001">0.00000001</option>
-                </select>
-            </div>
+            <input id="cadFileSelect" name="file" type="file"><p></p>
             <p></p>
             <div style="text-align: right;">
-                <input type="submit" value="Upload">
+                <input id="cadFileSubmit" type="submit" value="Upload">
             </div>
         </form>
 
@@ -135,6 +105,18 @@
                 <div class="itemList_thumbnail lightingItem" title="Sun Sky Model"><img src="Lighting/SunSkyModel.png">Sun Sky Model</div>
                 <div class="itemList_thumbnail lightingItem" title="Load Environment Map"><img src="Lighting/Load.png">Load HDRI file</div>
             </div>
+        </form>
+
+        <form id="upVectorDlg" style="display:none;">
+            <label for="upVector" style="margin-right: 5px;">Up Vector:</label>
+            <select id="upVector">
+                <option value="X">X</option>
+                <option value="Y">Y</option>
+                <option value="Z">Z</option>
+                <option value="-X">-X</option>
+                <option value="-Y">-Y</option>
+                <option value="-Z">-Z</option>
+            </select>
         </form>
 
         <div id="progress" class="centerBotomBlock" style="display:none;">

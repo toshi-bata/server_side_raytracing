@@ -498,16 +498,7 @@ answer_to_connection(void* cls,
         }
         else if (0 == strcmp(url, "/SetOptions"))
         {
-            int entityIds;
-            if (!paramStrToInt("entityIds", entityIds)) return MHD_NO;
-
-            int sewModel;
-			if (!paramStrToInt("sewModel", sewModel)) return MHD_NO;
-
-            double sewingTol;
-            if (!paramStrToDbl("sewingTol", sewingTol)) return MHD_NO;
-
-            pExProcess->SetOptions((bool) entityIds, (bool)sewModel, sewingTol);
+            pExProcess->SetOptions();
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
@@ -675,6 +666,14 @@ answer_to_connection(void* cls,
                 CameraInfo cameraInfo = pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
                 pHCLuminateBridge->syncScene(width, height, aMeshProps, cameraInfo);
+
+                // Delete mesh properties
+                for (auto it = aMeshProps.begin(); it != aMeshProps.end(); ++it)
+                {
+                    A3DTreeNodeGetName(nullptr, &it->name);
+                    A3DRiComputeMesh(nullptr, nullptr, &it->meshData, nullptr);
+                }
+                std::vector<MeshPropaties>().swap(aMeshProps);
 
                 con_info->answerstring = response_success;
                 con_info->answercode = MHD_HTTP_OK;

@@ -123,11 +123,11 @@ void ExProcess::Terminate()
 
 }
 
-void ExProcess::SetOptions(const bool entityIds, const bool sewModel, const double sewingTol)
+void ExProcess::SetOptions()
 {
-    m_bAddEntityIds = entityIds;
-    m_bSewModel = sewModel;
-    m_dSewingTol = sewingTol;
+    m_bAddEntityIds = false;
+    m_bSewModel = false;
+    m_dSewingTol = 0.1;
 
     // Init import options
     A3D_INITIALIZE_DATA(A3DRWParamsLoadData, m_sLoadData);
@@ -349,6 +349,8 @@ std::vector<MeshPropaties> ExProcess::GetModelMesh(const char* session_id)
     A3DMiscCascadedAttributesCreate(&pAttr);
 
     traverseTree(tree, root_node, pAttr);
+
+    iRet = A3DTreeCompute(nullptr, &tree, nullptr);
 
     return m_aMeshProps;
 }

@@ -136,6 +136,11 @@ class Main {
             }
         });
 
+        $('#cadFileSelect').change((e) =>{
+            if (0 < e.target.files.length)
+                $('#cadFileSubmit').click();
+        });
+
         $(".uploadDlg").submit((e) => {
             // Cancel default behavior (abort form action)
             e.preventDefault();
@@ -159,14 +164,7 @@ class Main {
                 const scModelName = "model";
 
                 // Get options
-                const entityIds = Number($("#checkEntityIds").prop('checked'));
-                const sewModel = Number($("#checkSewModel").prop('checked'));
-                const sewingTol = Number($("#sewingTol").val());
-
                 const params = {
-                    entityIds: entityIds,
-                    sewModel: sewModel,
-                    sewingTol: sewingTol
                 }
 
                 this._loadModel(params, formData, scModelName);
@@ -218,7 +216,7 @@ class Main {
             autoOpen: false,
             height: 420,
             width: 350,
-            modal: true,
+            modal: false,
             title: "Lighting Mode",
             closeOnEscape: true,
             position: {my: "left top", at: "left bottom", of: "#toolbarGr"},
@@ -248,6 +246,22 @@ class Main {
             if (0 < e.target.files.length)
                 $('#envFileSubmit').click();
         });
+        
+        // Up Vector dialog
+        $("#upVectorDlg").dialog({
+            autoOpen: false,
+            height: 200,
+            width: 350,
+            modal: false,
+            title: "Up Vector",
+            closeOnEscape: true,
+            position: {my: "left top", at: "left bottom", of: "#toolbarGr"},
+            buttons: {
+                'Close': () => {
+                    $("#upVectorDlg").dialog('close');
+                }
+            },
+        });
 
         // Progress bar
         $("#progressBar").progressbar({
@@ -260,7 +274,7 @@ class Main {
             }
           });
 
-        // Simple command
+        // Command
         $(".toolbarBtn").on("click", (e) => {
             let command = $(e.currentTarget).data("command");
             let isOn = $(e.currentTarget).data("on");
@@ -268,6 +282,7 @@ class Main {
             switch(command) {
                 case "Upload": {
                     $('#Upload3DDlg').dialog('open');
+                    $('#cadFileSelect').click();
                 } break;
                 case "Raytracing": {
                     this._invokeRaytracing(command);
@@ -284,6 +299,9 @@ class Main {
                 } break;
                 case "SetLighting": {
                     $('#lightingModeDlg').dialog('open');
+                } break;
+                case "UpVector": {
+                    $('#upVectorDlg').dialog('open');
                 } break;
                 case "Download": {
                     const serverName = this._sessionId + ".png";
@@ -303,6 +321,13 @@ class Main {
             } else {
                 $(e.currentTarget).data("on", true).css("background-color", "khaki");
             }
+        });
+
+        // Normal button common
+        $(".normalBtn").mousedown((e) => {
+            $(e.currentTarget).data("on", true).css("background-color", "khaki");
+        }).mouseup((e) => {
+            $(e.currentTarget).data("on", false).css("background-color", "gainsboro");
         });
 
         // Toolbar
@@ -336,29 +361,45 @@ class Main {
             // reset modelling matrix
             this._viewer.model.resetNodeMatrixToInitial(root);
 
-            let matrix = new Communicator.Matrix();
+            let roMatrix = new Communicator.Matrix();
             switch (upVect) {
-            case "X": matrix = Communicator.Matrix.yAxisRotation(90); break;
-            case "Y": matrix = Communicator.Matrix.xAxisRotation(-90); break;
+            case "X": roMatrix = Communicator.Matrix.yAxisRotation(90); break;
+            case "Y": roMatrix = Communicator.Matrix.xAxisRotation(-90); break;
             case "Z": break;
-            case "-X": matrix = Communicator.Matrix.yAxisRotation(-90); break;
-            case "-Y": matrix = Communicator.Matrix.xAxisRotation(90); break;
-            case "-Z": matrix = Communicator.Matrix.xAxisRotation(180);break;
+            case "-X": roMatrix = Communicator.Matrix.yAxisRotation(-90); break;
+            case "-Y": roMatrix = Communicator.Matrix.xAxisRotation(90); break;
+            case "-Z": roMatrix = Communicator.Matrix.xAxisRotation(180);break;
             }
 
-            // set root matrix
-            this._viewer.model.setNodeMatrix(root, matrix);
+            // Compute rotation center
+            this._viewer.model.getModelBounding(true, false).then((box) => {
+                const center = box.min.copy().add(box.max.copy().subtract(box.min).scale(0.5));
 
-            let matArr = [];
-            for (let i = 0; i < 16; i++) {
-                matArr.push(matrix.m[i]);
-            }
-            const params = {
-                matrix: matArr
-            }
+                // Compute center point after rotation
+                const roPoint = Communicator.Point3.zero();
+                roMatrix.transform(center, roPoint);
 
-            this._serverCaller.CallServerPost("SetRootTransform", params).then(() => {
-                this._invokeDraw();
+                // Create translation matrix to shift the node arond rotation center after rotation
+                const trMatrix = new Communicator.Matrix();
+                trMatrix.setTranslationComponent(center.x - roPoint.x, center.y - roPoint.y, center.z - roPoint.z);
+
+                // Compute the node matrix of after rotation (multiplyMatrix * translationMatrix)
+                const matrix = Communicator.Matrix.multiply(roMatrix, trMatrix);
+
+                // set root matrix
+                this._viewer.model.setNodeMatrix(root, matrix);
+
+                let matArr = [];
+                for (let i = 0; i < 16; i++) {
+                    matArr.push(matrix.m[i]);
+                }
+                const params = {
+                    matrix: matArr
+                }
+
+                this._serverCaller.CallServerPost("SetRootTransform", params).then(() => {
+                    this._invokeDraw();
+                });
             });
         });
     }
@@ -613,6 +654,8 @@ class Main {
     }
 
     setMaterial(name) {
+        this._clearRaytracing();
+        
         const preserveColor = Number($("#checkPreserveColor").prop('checked'));
         const overrideMaterial = Number($("#checkOverrideMaterial").prop('checked'));
 
@@ -625,15 +668,20 @@ class Main {
 
         this._serverCaller.CallServerPost("SetMaterial", params).then((arr) => {
             this._viewer.model.resetModelHighlight();
+            this._isAutoSlide = true;
+            this._invokeDraw();
         });
     }
 
     _setLightingMode(lightingId) {
+        this._clearRaytracing();
+        
         const params = {
             lightingId: lightingId
         }
 
         this._serverCaller.CallServerPost("SetLighting", params).then((arr) => {
+            this._invokeDraw();
         });
     }
 
