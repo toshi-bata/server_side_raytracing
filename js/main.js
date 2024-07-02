@@ -104,11 +104,8 @@ class Main {
                 // Resize Lumionate
                 let isOn = $('[data-command="Raytracing"]').data("on");
                 if (isOn) {
-                    this._clearRaytracing();
-
                     const params = this._getRenderingParams();
                     this._serverCaller.CallServerPost("Resize", params).then(() => {
-                        this._invokeDraw();
                     });
                 }
 
@@ -353,8 +350,6 @@ class Main {
         // Up vector
         $("#upVector").val("Z");
         $('#upVector').change((e) => {
-            this._clearRaytracing();
-        
             const upVect = $(e.currentTarget).val();
             const root = this._viewer.model.getAbsoluteRootNode();
 
@@ -398,7 +393,6 @@ class Main {
                 }
 
                 this._serverCaller.CallServerPost("SetRootTransform", params).then(() => {
-                    this._invokeDraw();
                 });
             });
         });
@@ -504,7 +498,6 @@ class Main {
 
     _loadEnv(formData) {
         $("#loadingImage").show();
-        this._clearRaytracing();
 
         this._serverCaller.CallServerSubmitFile(formData).then((arr) => {
             $("#loadingImage").hide();
@@ -521,8 +514,6 @@ class Main {
                     this._currentLightingId = 4;
 
                     this._setLightingThumbClickHandler();
-
-                    this._invokeDraw();
                 }
             }
         });
@@ -603,7 +594,7 @@ class Main {
         this._isAutoSlide = true;
 
         this._timerId = setInterval(() => {
-            if (false == this._isBusy) {
+            if (false == this._isBusy && 0 < this._timerId) {
                 this._isBusy = true;
                 this._serverCaller.CallServerPost("Draw", "{}", "FLOAT").then((arr) => {
                     this._isBusy = false;
@@ -654,8 +645,6 @@ class Main {
     }
 
     setMaterial(name) {
-        this._clearRaytracing();
-        
         const preserveColor = Number($("#checkPreserveColor").prop('checked'));
         const overrideMaterial = Number($("#checkOverrideMaterial").prop('checked'));
 
@@ -669,19 +658,15 @@ class Main {
         this._serverCaller.CallServerPost("SetMaterial", params).then((arr) => {
             this._viewer.model.resetModelHighlight();
             this._isAutoSlide = true;
-            this._invokeDraw();
         });
     }
 
     _setLightingMode(lightingId) {
-        this._clearRaytracing();
-        
         const params = {
             lightingId: lightingId
         }
 
         this._serverCaller.CallServerPost("SetLighting", params).then((arr) => {
-            this._invokeDraw();
         });
     }
 
