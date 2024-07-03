@@ -76,3 +76,12 @@ body {
     left: 20px;
     bottom: 80px;
 }
+.logo {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: white;
+}
+.logo img {
+    height: 48px;
+}
