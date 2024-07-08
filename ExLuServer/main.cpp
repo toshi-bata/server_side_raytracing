@@ -524,18 +524,35 @@ answer_to_connection(void* cls,
             if (NULL != m_pHCLuminateBridge)
             {
                 m_pHCLuminateBridge->shutdown();
+                delete m_pHCLuminateBridge;
                 m_pHCLuminateBridge = NULL;
             }
 
-            // Delete previous rendering image
             char filePath[FILENAME_MAX];
+            
+            // Delete previous rendering image
             sprintf(filePath, "%s%s.png", s_pcHtmlRootDir, con_info->sessionId);
+
 #ifndef _WIN32
             delete_files(filePath);
 #else
-            wchar_t wFilePath[_MAX_FNAME];
-            mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
-            _wremove(wFilePath);
+            {
+                wchar_t wFilePath[_MAX_FNAME];
+                mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
+                _wremove(wFilePath);
+            }
+#endif
+            // Delete thumbnail image
+#ifndef _WIN32
+            sprintf(filePath, "%sLighting/EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+            delete_files(filePath);
+#else
+            {
+                sprintf(filePath, "%sLighting\\EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+                wchar_t wFilePath[_MAX_FNAME];
+                mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
+                _wremove(wFilePath);
+            }
 #endif
 
             con_info->answerstring = response_success;

@@ -28,31 +28,13 @@ namespace HC_luminate_bridge {
 
     HCLuminateBridge::HCLuminateBridge() :
         m_frameIsComplete(false), m_newFrameIsRequired(true), m_axisTriad(),  m_bSyncCamera(false),
-        m_lightingModel(LightingModel::No), m_windowWidth(0), m_windowHeight(0), m_defaultLightingModel(), m_sunSkyLightingModel(),
-        m_environmentMapLightingModel(), m_frameTracingMode(RED::FTF_PATH_TRACING), m_selectedSegmentTransformIsDirty(false),
-        m_iVRL(1)
+        m_lightingModel(LightingModel::No), m_defaultLightingModel(), m_sunSkyLightingModel(),
+        m_environmentMapLightingModel(), m_frameTracingMode(RED::FTF_PATH_TRACING), m_selectedSegmentTransformIsDirty(false)
     {
     }
 
     HCLuminateBridge::~HCLuminateBridge()
     {
-        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
-        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
-
-        // clean default model
-        //iresourceManager->DeleteImage(m_defaultLightingModel.backgroundCubeImage, iresourceManager->GetState());
-        //RED::Factory::DeleteInstance(m_defaultLightingModel.skyLight, iresourceManager->GetState());
-
-        // clean sun sky model
-        iresourceManager->DeleteImage(m_sunSkyLightingModel.backgroundCubeImage, iresourceManager->GetState());
-        RED::Factory::DeleteInstance(m_sunSkyLightingModel.skyLight, iresourceManager->GetState());
-        RED::Factory::DeleteInstance(m_sunSkyLightingModel.sunLight, iresourceManager->GetState());
-
-        // clean env map
-        if (m_environmentMapLightingModel.imagePath != "") {
-            iresourceManager->DeleteImage(m_environmentMapLightingModel.backgroundCubeImage, iresourceManager->GetState());
-            RED::Factory::DeleteInstance(m_environmentMapLightingModel.skyLight, iresourceManager->GetState());
-        }
     }
 
     bool HCLuminateBridge::initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight,
@@ -119,11 +101,8 @@ namespace HC_luminate_bridge {
         // Create a Luminate window.
         //////////////////////////////////////////
 
-        m_windowWidth = a_windowWidth;
-        m_windowHeight = a_windowHeight;
-
 #ifdef _LIN32
-        rc = createRedWindow(a_osHandle, m_windowWidth, m_windowHeight, a_display, a_screen, a_visual, m_window);
+        rc = createRedWindow(a_osHandle, a_windowWidth, a_windowHeight, a_display, a_screen, a_visual, m_window);
 #else
         rc = createRedWindow(a_osHandle, 600, 400, m_window);
 #endif
@@ -143,16 +122,18 @@ namespace HC_luminate_bridge {
         RED::IWindow* iwindow = m_window->As<RED::IWindow>();
 
         // Auxiliary VRL creation
-        rc = iwindow->CreateVRL(m_auxvrl, m_windowWidth, m_windowHeight, RED::FMT_RGBA, true, iresourceManager->GetState());
+        RED::Object* auxvrl;
+        rc = iwindow->CreateVRL(auxvrl, a_windowWidth, a_windowHeight, RED::FMT_RGBA, true, iresourceManager->GetState());
 
-        RED::IViewpointRenderList* iauxvrl = m_auxvrl->As<RED::IViewpointRenderList>();
+        RED::IViewpointRenderList* iauxvrl = auxvrl->As<RED::IViewpointRenderList>();
         RC_CHECK(iauxvrl->SetSoftAntiAlias(20, iresourceManager->GetState()));
 
         //////////////////////////////////////////
         // Create and initialize Luminate camera.
         //////////////////////////////////////////
 
-        rc = createCamera(m_window, m_windowWidth, m_windowHeight, m_camera);
+        RED::Object* viewpoint;
+        rc = createCamera(m_window, a_windowWidth, a_windowHeight, 1, viewpoint);
         if (rc != RED_OK)
             return false;
 
@@ -180,7 +161,7 @@ namespace HC_luminate_bridge {
         //////////////////////////////////////////
         m_conversionDataPtr.reset(new LuminateSceneInfo());
         m_conversionDataPtr->rootTransformShape = RED::Factory::CreateInstance(CID_REDTransformShape);
-        addSceneToCamera(m_camera, *m_conversionDataPtr);
+        addSceneToCamera(viewpoint, *m_conversionDataPtr);
 
         //////////////////////////////////////////
         // Initialize the lighting environment with
@@ -211,6 +192,24 @@ namespace HC_luminate_bridge {
         // This will destroy absolutely all, including
         // shared resources.
         //////////////////////////////////////////
+        
+        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+
+        // clean default model
+        iresourceManager->DeleteImage(m_defaultLightingModel.backgroundCubeImage, iresourceManager->GetState());
+        RED::Factory::DeleteInstance(m_defaultLightingModel.skyLight, iresourceManager->GetState());
+
+        // clean sun sky model
+        iresourceManager->DeleteImage(m_sunSkyLightingModel.backgroundCubeImage, iresourceManager->GetState());
+        RED::Factory::DeleteInstance(m_sunSkyLightingModel.skyLight, iresourceManager->GetState());
+        RED::Factory::DeleteInstance(m_sunSkyLightingModel.sunLight, iresourceManager->GetState());
+
+        // clean env map
+        if (m_environmentMapLightingModel.imagePath != "") {
+            iresourceManager->DeleteImage(m_environmentMapLightingModel.backgroundCubeImage, iresourceManager->GetState());
+            RED::Factory::DeleteInstance(m_environmentMapLightingModel.skyLight, iresourceManager->GetState());
+        }
 
         return shutdownLuminate(m_window) == RED_OK;
     }
@@ -225,16 +224,13 @@ namespace HC_luminate_bridge {
         if (rc != RED_OK)
             return false;
 
-        m_windowWidth = a_windowWidth;
-        m_windowHeight = a_windowHeight;
-
         //////////////////////////////////////////
         // As window size has changed, a camera sync
         // is required for projection computation.
         //////////////////////////////////////////
 
         // But don't do it if width or height is == 0
-        if (m_windowHeight == 0 || m_windowWidth == 0)
+        if (a_windowHeight == 0 || a_windowWidth == 0)
             return true;
 
         return syncLuminateCamera(a_cameraInfo) == RED_OK;
@@ -258,7 +254,7 @@ namespace HC_luminate_bridge {
         rc = checkDrawTracing(m_window, m_frameTracingMode, m_frameIsComplete, m_newFrameIsRequired);
         //RED_RC rc = checkDrawHardware(m_window);
 
-        checkFrameStatistics(m_window, m_iVRL, &m_lastFrameStatistics, m_frameIsComplete);
+        checkFrameStatistics(m_window, 1, &m_lastFrameStatistics, m_frameIsComplete);
 
         return rc == RED_OK;
     }
@@ -280,10 +276,6 @@ namespace HC_luminate_bridge {
 
     bool HCLuminateBridge::syncScene(const int a_windowWidth, const int a_windowHeight, std::vector <MeshPropaties> aMeshProps, CameraInfo a_cameraInfo)
     {
-        // Check resize window
-        if (m_windowWidth != a_windowWidth || m_windowHeight != a_windowHeight)
-            resize(a_windowWidth, a_windowHeight, a_cameraInfo);
-
         //////////////////////////////////////////
         // Retrieve the resource manager from singleton
         //////////////////////////////////////////
@@ -296,8 +288,8 @@ namespace HC_luminate_bridge {
         // operations.
         //////////////////////////////////////////
 
-        RED::IWindow* window = m_window->As<RED::IWindow>();
-        window->FrameTracingStop();
+        RED::IWindow* iwindow = m_window->As<RED::IWindow>();
+        iwindow->FrameTracingStop();
 
         //////////////////////////////////////////
         // Convert 3DF current scene to Luminate scene
@@ -308,8 +300,16 @@ namespace HC_luminate_bridge {
         // have huge scale differences.
         //////////////////////////////////////////
 
+        int windowWidth, windowHeight;
+
+        RED::Object* auxvrl = NULL;
+        RC_TEST(iwindow->GetVRL(auxvrl, 1));
+
+        RED::IViewpointRenderList* iauxvrl = auxvrl->As<RED::IViewpointRenderList>();
+        iauxvrl->GetSize(windowWidth, windowHeight);
+
         RED::Object* newCamera = nullptr;
-        RED_RC rc = createCamera(m_window, m_windowWidth, m_windowHeight, newCamera);
+        RED_RC rc = createCamera(m_window, windowWidth, windowHeight, 1, newCamera);
 
         if (rc != RED_OK)
             return false;
@@ -324,13 +324,13 @@ namespace HC_luminate_bridge {
 
         switch (m_lightingModel) {
         case LightingModel::Default:
-            addDefaultModel(m_window, m_iVRL, newSceneInfo->rootTransformShape, m_defaultLightingModel);
+            addDefaultModel(m_window, 1, newSceneInfo->rootTransformShape, m_defaultLightingModel);
             break;
         case LightingModel::PhysicalSunSky:
-            addSunSkyModel(m_window, m_iVRL, newSceneInfo->rootTransformShape, m_sunSkyLightingModel);
+            addSunSkyModel(m_window, 1, newSceneInfo->rootTransformShape, m_sunSkyLightingModel);
             break;
         case LightingModel::EnvironmentMap:
-            addEnvironmentMapModel(m_window, m_iVRL, newSceneInfo->rootTransformShape, m_environmentMapLightingModel);
+            addEnvironmentMapModel(m_window, 1, newSceneInfo->rootTransformShape, m_environmentMapLightingModel);
             break;
         };
 
@@ -346,7 +346,9 @@ namespace HC_luminate_bridge {
                 return false;
         }
 
-        rc = RED::Factory::DeleteInstance(m_camera, iresourceManager->GetState());
+        RED::Object* viewpoint;
+        rc = iauxvrl->GetViewpoint(viewpoint, 1);
+        rc = RED::Factory::DeleteInstance(viewpoint, iresourceManager->GetState());
   
         if (rc != RED_OK)
             return false;
@@ -357,8 +359,6 @@ namespace HC_luminate_bridge {
         // Synchronise the new camera with the
         // new scene.
         //////////////////////////////////////////
-
-        m_camera = newCamera;
 
         return syncLuminateCamera(a_cameraInfo) == RED_OK;
     }
@@ -410,11 +410,15 @@ namespace HC_luminate_bridge {
 
     bool HCLuminateBridge::saveImg(const char* filePath)
     {
-        RED_RC rc;
-        RED::IViewpointRenderList* defaultVRL = m_auxvrl->As<RED::IViewpointRenderList>();
-        RED::Object* renderimg = defaultVRL->GetRenderImage();
+        RED::IWindow* iwindow = m_window->As<RED::IWindow>();
 
-        rc = RED::ImageTools::Save(renderimg, false, filePath, false, true, 1.0);
+        RED::Object* auxvrl = NULL;
+        RC_TEST(iwindow->GetVRL(auxvrl, 1));
+
+        RED::IViewpointRenderList* iauxvrl = auxvrl->As<RED::IViewpointRenderList>();
+        RED::Object* renderimg = iauxvrl->GetRenderImage();
+
+        RC_TEST(RED::ImageTools::Save(renderimg, false, filePath, false, true, 1.0));
         return true;
     }
 
@@ -425,7 +429,18 @@ namespace HC_luminate_bridge {
         Handedness viewHandedness =
             m_conversionDataPtr != nullptr ? m_conversionDataPtr->viewHandedness : Handedness::RightHanded;
 
-        rc = syncCameras(m_camera, viewHandedness, m_windowWidth, m_windowHeight, a_cameraInfo);
+        int windowWidth, windowHeight;
+
+        RED::IWindow* iwindow = m_window->As<RED::IWindow>();
+        RED::Object* auxvrl = NULL;
+        RC_TEST(iwindow->GetVRL(auxvrl, 1));
+
+        RED::IViewpointRenderList* iauxvrl = auxvrl->As<RED::IViewpointRenderList>();
+        iauxvrl->GetSize(windowWidth, windowHeight);
+
+        RED::Object* viewpoint;
+        rc = iauxvrl->GetViewpoint(viewpoint, 0);
+        rc = syncCameras(viewpoint, viewHandedness, windowWidth, windowHeight, a_cameraInfo);
 
         //rc = synchronizeAxisTriadWithCamera(m_axisTriad, m_camera);
 
@@ -435,14 +450,14 @@ namespace HC_luminate_bridge {
     }
 
     RED_RC
-    HCLuminateBridge::createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, RED::Object*& a_outCamera)
+    HCLuminateBridge::createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera)
     {
         //////////////////////////////////////////
         // Create a Luminate camera which will render
         // in the window.
         //////////////////////////////////////////
 
-        RC_TEST(createRedCamera(a_window, a_windowWidh, a_windowHeight, m_iVRL, a_outCamera));
+        RC_TEST(createRedCamera(a_window, a_windowWidh, a_windowHeight, a_vrlId, a_outCamera));
 
         //////////////////////////////////////////
         // Set camera scope rendering options
@@ -466,13 +481,13 @@ namespace HC_luminate_bridge {
 
         switch (m_lightingModel) {
         case LightingModel::Default:
-            rc = removeDefaultModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
+            rc = removeDefaultModel(m_window, 1, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
             break;
         case LightingModel::PhysicalSunSky:
-            rc = removeSunSkyModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_sunSkyLightingModel);
+            rc = removeSunSkyModel(m_window, 1, m_conversionDataPtr->rootTransformShape, m_sunSkyLightingModel);
             break;
         case LightingModel::EnvironmentMap:
-            rc = removeEnvironmentMapModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
+            rc = removeEnvironmentMapModel(m_window, 1, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
             break;
         default:
             break;
@@ -488,7 +503,7 @@ namespace HC_luminate_bridge {
     {
         removeCurrentLightingEnvironment();
         m_lightingModel = LightingModel::Default;
-        addDefaultModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
+        addDefaultModel(m_window, 1, m_conversionDataPtr->rootTransformShape, m_defaultLightingModel);
         resetFrame();
 
         return RED_RC();
@@ -499,7 +514,7 @@ namespace HC_luminate_bridge {
         removeCurrentLightingEnvironment();
 
         m_lightingModel = LightingModel::PhysicalSunSky;
-        addSunSkyModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_sunSkyLightingModel);
+        addSunSkyModel(m_window, 1, m_conversionDataPtr->rootTransformShape, m_sunSkyLightingModel);
         resetFrame();
 
         return RED_OK;
@@ -520,7 +535,7 @@ namespace HC_luminate_bridge {
             rc = createEnvironmentImageLightingModel(
                 a_imageFilepath.c_str(), a_backgroundColor, a_showImage, m_environmentMapLightingModel);
 
-        addEnvironmentMapModel(m_window, m_iVRL, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
+        addEnvironmentMapModel(m_window, 1, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
         resetFrame();
 
         if (NULL != thumbFilePath)
@@ -528,26 +543,30 @@ namespace HC_luminate_bridge {
             RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
             RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
 
-            // Auxiliary VRL creation
+            // Create auxiliary VRL for thumbnail
             RED::IWindow* iwindow = m_window->As<RED::IWindow>();
             RED::Object* auxvrl;
-            rc = iwindow->CreateVRL(auxvrl, 320, 320, RED::FMT_RGBA, true, iresourceManager->GetState());
+            RC_TEST(iwindow->CreateVRL(auxvrl, 320, 320, RED::FMT_RGBA, true, iresourceManager->GetState()));
 
-            m_iVRL = 2;
+            // Create cameta into the auxiliary VRL
             RED::Object* newCamera = nullptr;
-            rc = createCamera(m_window, 320, 320, newCamera);
-            m_iVRL = 1;
+            RC_TEST(createCamera(m_window, 320, 320, 2, newCamera));
 
+            // Apply emvironment map into the auxiliary VRL
             addEnvironmentMapModel(m_window, 2, m_conversionDataPtr->rootTransformShape, m_environmentMapLightingModel);
 
-            draw();
-            draw();
-            draw();
+            // Draw
+            for (int i = 0; i < 10; i++)
+                draw();
 
-            RED::IViewpointRenderList* auxVRL = auxvrl->As<RED::IViewpointRenderList>();
-            RED::Object* renderimg = auxVRL->GetRenderImage();
+            // Save thumbnail image
+            RED::IViewpointRenderList* iauxvrl = auxvrl->As<RED::IViewpointRenderList>();
+            RED::Object* renderimg = iauxvrl->GetRenderImage();
 
-            rc = RED::ImageTools::Save(renderimg, false, thumbFilePath, false, true, 1.0);
+            RC_TEST(RED::ImageTools::Save(renderimg, false, thumbFilePath, false, true, 1.0));
+
+            // Delete auxiliary VRL
+            RC_TEST(iwindow->DeleteVRL(auxvrl, iresourceManager->GetState()));
         }
         return rc;
     }
