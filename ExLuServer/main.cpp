@@ -726,7 +726,8 @@ answer_to_connection(void* cls,
             }
             else
             {
-                m_pHCLuminateBridge->draw();
+                for (int i = 0; i > 10; i++)
+                    m_pHCLuminateBridge->draw();
 
                 FrameStatistics statistics = m_pHCLuminateBridge->getFrameStatistics();
 
