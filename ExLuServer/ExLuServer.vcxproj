@@ -157,6 +157,7 @@
     <ClCompile Include="ConversionTools.cpp" />
     <ClCompile Include="ExProcess.cpp" />
     <ClCompile Include="HCLuminateBridge.cpp" />
+    <ClCompile Include="HLuminateServer.cpp" />
     <ClCompile Include="LightingEnvironment.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="utilities.cpp" />
@@ -166,6 +167,7 @@
     <ClInclude Include="ConversionTools.h" />
     <ClInclude Include="ExProcess.h" />
     <ClInclude Include="HCLuminateBridge.h" />
+    <ClInclude Include="HLuminateServer.h" />
     <ClInclude Include="LightingEnvironment.h" />
     <ClInclude Include="utilities.h" />
   </ItemGroup>

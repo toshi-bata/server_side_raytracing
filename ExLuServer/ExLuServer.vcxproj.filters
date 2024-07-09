@@ -36,6 +36,9 @@
     <ClCompile Include="AxisTriad.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HLuminateServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ExProcess.h">
@@ -54,6 +57,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AxisTriad.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HLuminateServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

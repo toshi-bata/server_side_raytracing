@@ -18,8 +18,8 @@
 #include "hoops_license.h"
 #include "utilities.h"
 #include "ExProcess.h"
-#include "HCLuminateBridge.h"
 #include <windows.h>
+#include "HLuminateServer.h"
 
 using namespace HC_luminate_bridge;
 
@@ -52,7 +52,7 @@ enum ConnectionType
 
 static unsigned int nr_of_uploading_clients = 0;
 static ExProcess *pExProcess;
-HCLuminateBridge* m_pHCLuminateBridge = NULL;
+static HLuminateServer* m_pHLuminateServer;
 
 /**
  * Information we keep per connection.
@@ -248,44 +248,6 @@ bool paramStrToChr(const char *key, char &cha)
 	cha = sVal.c_str()[0];
 
 	return true;
-}
-
-HWND GetConsoleHwnd()
-{
-#define MY_BUFSIZE 1024 // Buffer size for console window titles.
-    HWND hwndFound;         // This is what is returned to the caller.
-    wchar_t pszNewWindowTitle[MY_BUFSIZE]; // Contains fabricated
-                                        // WindowTitle.
-    wchar_t pszOldWindowTitle[MY_BUFSIZE]; // Contains original
-                                        // WindowTitle.
-
-    // Fetch current window title.
-
-    GetConsoleTitle(pszOldWindowTitle, MY_BUFSIZE);
-
-    // Format a "unique" NewWindowTitle.
-
-    wsprintf(pszNewWindowTitle, L"%d/%d",
-        GetTickCount(),
-        GetCurrentProcessId());
-
-    // Change current window title.
-
-    SetConsoleTitle(pszNewWindowTitle);
-
-    // Ensure window title has been updated.
-
-    Sleep(40);
-
-    // Look for NewWindowTitle.
-
-    hwndFound = FindWindow(NULL, pszNewWindowTitle);
-
-    // Restore original window title.
-
-    SetConsoleTitle(pszOldWindowTitle);
-
-    return(hwndFound);
 }
 
 static enum MHD_Result
@@ -520,13 +482,8 @@ answer_to_connection(void* cls,
             // Delete ModelFile
             pExProcess->DeleteModelFile(con_info->sessionId);
 
-            // Delete Luminate bridge
-            if (NULL != m_pHCLuminateBridge)
-            {
-                m_pHCLuminateBridge->shutdown();
-                delete m_pHCLuminateBridge;
-                m_pHCLuminateBridge = NULL;
-            }
+            // Delete Luminate session
+            m_pHLuminateServer->ClearSession(con_info->sessionId);
 
             char filePath[FILENAME_MAX];
             
@@ -599,28 +556,19 @@ answer_to_connection(void* cls,
                 if (0 == strcmp(lowExt, "hdr"))
                 {
                     // Load environment map file
-                    if (NULL == m_pHCLuminateBridge)
-                    {
-                        floatArr.push_back(0);
-                        con_info->answerstring = response_error;
-                        con_info->answercode = MHD_HTTP_OK;
-                    }
-                    else
-                    {
-                        char thumbnailPath[FILENAME_MAX];
+                    char thumbnailPath[FILENAME_MAX];
 #ifndef _WIN32
-                        sprintf(thumbnailPath, "%sLighting/EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+                    sprintf(thumbnailPath, "%sLighting/EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
 #else
-                        sprintf(thumbnailPath, "%sLighting\\EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+                    sprintf(thumbnailPath, "%sLighting\\EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
 #endif
-
-                        m_pHCLuminateBridge->resetFrame();
-                        m_pHCLuminateBridge->setEnvMapLightEnvironment(filePath, true, RED::Color::WHITE, thumbnailPath);
-
+                    if (m_pHLuminateServer->LoadEnvMapFile(con_info->sessionId, filePath, thumbnailPath))
                         floatArr.push_back(1);
-                        con_info->answerstring = response_success;
-                        con_info->answercode = MHD_HTTP_OK;
-                    }
+                    else
+                        floatArr.push_back(0);
+
+                    con_info->answerstring = response_success;
+                    con_info->answercode = MHD_HTTP_OK;
                 }
                 else
                 {
@@ -673,14 +621,8 @@ answer_to_connection(void* cls,
             if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
             if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
-            m_pHCLuminateBridge = new HCLuminateBridge();
-
-            CameraInfo cameraInfo = m_pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
-
-            HWND hWnd = GetConsoleHwnd();
-            std::string filepath = "";
-            if (m_pHCLuminateBridge->initialize(HOOPS_LICENSE, hWnd, width, height, filepath, cameraInfo))
-                m_pHCLuminateBridge->draw();
+            m_pHLuminateServer->PrepareRendering(con_info->sessionId, 
+                target, up, position, projection, cameraW, cameraH, width, height);
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
@@ -689,233 +631,150 @@ answer_to_connection(void* cls,
         }
         else if (0 == strcmp(url, "/Raytracing"))
         {
-            if (NULL == m_pHCLuminateBridge)
+            double width, height;
+            if (!paramStrToDbl("width", width)) return MHD_NO;
+            if (!paramStrToDbl("height", height)) return MHD_NO;
+
+            double *target, *up, *position;
+            if (!paramStrToXYZ("target", target)) return MHD_NO;
+            if (!paramStrToXYZ("up", up)) return MHD_NO;
+            if (!paramStrToXYZ("position", position)) return MHD_NO;
+
+            int projection;
+            if (!paramStrToInt("projection", projection)) return MHD_NO;
+
+            double cameraW, cameraH;
+            if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
+            if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
+
+            std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
+
+            m_pHLuminateServer->StartRendering(con_info->sessionId, 
+                target, up, position, projection, cameraW, cameraH, 
+                width, height, aMeshProps);
+
+            // Delete mesh properties
+            for (auto it = aMeshProps.begin(); it != aMeshProps.end(); ++it)
             {
-                con_info->answerstring = response_error;
-                con_info->answercode = MHD_HTTP_OK;
+                A3DTreeNodeGetName(nullptr, &it->name);
+                A3DRiComputeMesh(nullptr, nullptr, &it->meshData, nullptr);
             }
-            else
-            {
-                double width, height;
-                if (!paramStrToDbl("width", width)) return MHD_NO;
-                if (!paramStrToDbl("height", height)) return MHD_NO;
+            std::vector<MeshPropaties>().swap(aMeshProps);
 
-                double *target, *up, *position;
-                if (!paramStrToXYZ("target", target)) return MHD_NO;
-                if (!paramStrToXYZ("up", up)) return MHD_NO;
-                if (!paramStrToXYZ("position", position)) return MHD_NO;
-
-                int projection;
-                if (!paramStrToInt("projection", projection)) return MHD_NO;
-
-                double cameraW, cameraH;
-                if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
-                if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
-
-                std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
-
-                CameraInfo cameraInfo = m_pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
-
-                m_pHCLuminateBridge->syncScene(width, height, aMeshProps, cameraInfo);
-
-                // Delete mesh properties
-                for (auto it = aMeshProps.begin(); it != aMeshProps.end(); ++it)
-                {
-                    A3DTreeNodeGetName(nullptr, &it->name);
-                    A3DRiComputeMesh(nullptr, nullptr, &it->meshData, nullptr);
-                }
-                std::vector<MeshPropaties>().swap(aMeshProps);
-
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
-            }
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
         else if (0 == strcmp(url, "/Draw"))
         {
-            std::vector<float> floatArr;
-            
-            if (NULL == m_pHCLuminateBridge)
-            {
-                con_info->answerstring = response_error;
-                con_info->answercode = MHD_HTTP_OK;
-            }
-            else
-            {
-                for (int i = 0; i < 10; i++)
-                    m_pHCLuminateBridge->draw();
 
-                FrameStatistics statistics = m_pHCLuminateBridge->getFrameStatistics();
+            char filePath[FILENAME_MAX];
+            sprintf(filePath, "%s%s.png", s_pcHtmlRootDir, con_info->sessionId);
+            std::vector<float> floatArr = m_pHLuminateServer->Draw(con_info->sessionId, filePath);
 
-                floatArr.push_back(statistics.renderingIsDone);
-                floatArr.push_back(statistics.renderingProgress);
-                floatArr.push_back(statistics.remainingTimeMilliseconds);
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
 
-                char filePath[FILENAME_MAX];
-                sprintf(filePath, "%s%s.png", s_pcHtmlRootDir, con_info->sessionId);
-                m_pHCLuminateBridge->saveImg(filePath);
-
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
-            }
             return sendResponseFloatArr(connection, floatArr);
         }
         else if (0 == strcmp(url, "/SyncCamera"))
         {
-            if (NULL == m_pHCLuminateBridge)
-            {
-                con_info->answerstring = response_error;
-                con_info->answercode = MHD_HTTP_OK;
-            }
-            else
-            {
-                double* target, * up, * position;
-                if (!paramStrToXYZ("target", target)) return MHD_NO;
-                if (!paramStrToXYZ("up", up)) return MHD_NO;
-                if (!paramStrToXYZ("position", position)) return MHD_NO;
+            double* target, * up, * position;
+            if (!paramStrToXYZ("target", target)) return MHD_NO;
+            if (!paramStrToXYZ("up", up)) return MHD_NO;
+            if (!paramStrToXYZ("position", position)) return MHD_NO;
 
-                int projection;
-                if (!paramStrToInt("projection", projection)) return MHD_NO;
+            int projection;
+            if (!paramStrToInt("projection", projection)) return MHD_NO;
 
-                double cameraW, cameraH;
-                if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
-                if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
+            double cameraW, cameraH;
+            if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
+            if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
-                CameraInfo cameraInfo = m_pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
+            m_pHLuminateServer->SyncCamera(con_info->sessionId, target, up, position, projection, cameraW, cameraH);
 
-                m_pHCLuminateBridge->setSyncCamera(true, cameraInfo);
-
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
-            }
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
         else if (0 == strcmp(url, "/Resize"))
         {
-            if (NULL == m_pHCLuminateBridge)
-            {
-                con_info->answerstring = response_error;
-                con_info->answercode = MHD_HTTP_OK;
-            }
-            else
-            {
-                double width, height;
-                if (!paramStrToDbl("width", width)) return MHD_NO;
-                if (!paramStrToDbl("height", height)) return MHD_NO;
+            double width, height;
+            if (!paramStrToDbl("width", width)) return MHD_NO;
+            if (!paramStrToDbl("height", height)) return MHD_NO;
 
-                double* target, * up, * position;
-                if (!paramStrToXYZ("target", target)) return MHD_NO;
-                if (!paramStrToXYZ("up", up)) return MHD_NO;
-                if (!paramStrToXYZ("position", position)) return MHD_NO;
+            double* target, * up, * position;
+            if (!paramStrToXYZ("target", target)) return MHD_NO;
+            if (!paramStrToXYZ("up", up)) return MHD_NO;
+            if (!paramStrToXYZ("position", position)) return MHD_NO;
 
-                int projection;
-                if (!paramStrToInt("projection", projection)) return MHD_NO;
+            int projection;
+            if (!paramStrToInt("projection", projection)) return MHD_NO;
 
-                double cameraW, cameraH;
-                if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
-                if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
+            double cameraW, cameraH;
+            if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
+            if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
-                CameraInfo cameraInfo = m_pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
+            m_pHLuminateServer->Resize(con_info->sessionId, target, up, position, projection, cameraW, cameraH, width, height);
 
-                m_pHCLuminateBridge->resize(width, height, cameraInfo);
-
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
-            }
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
         else if (0 == strcmp(url, "/SetMaterial"))
         {
-            if (NULL == m_pHCLuminateBridge)
-            {
-                con_info->answerstring = response_error;
-                con_info->answercode = MHD_HTTP_OK;
-            }
-            else
-            {
-                std::string nodeName, redFile;
-                if (!paramStrToStr("nodeName", nodeName)) return MHD_NO;
-                if (!paramStrToStr("redFile", redFile)) return MHD_NO;
+            std::string nodeName, redFile;
+            if (!paramStrToStr("nodeName", nodeName)) return MHD_NO;
+            if (!paramStrToStr("redFile", redFile)) return MHD_NO;
 
-                int preserveColor, overrideMaterial;
-                if (!paramStrToInt("preserveColor", preserveColor)) return MHD_NO;
-                if (!paramStrToInt("overrideMaterial", overrideMaterial)) return MHD_NO;
+            int preserveColor, overrideMaterial;
+            if (!paramStrToInt("preserveColor", preserveColor)) return MHD_NO;
+            if (!paramStrToInt("overrideMaterial", overrideMaterial)) return MHD_NO;
 
-                // Get material
-                RED::String redfilename = RED::String(s_pcHtmlRootDir);
-                redfilename.Add(RED::String("MaterialLibrary\\"));
-                redfilename.Add(RED::String(redFile.data()));
+            // Get material
+            RED::String redfilename = RED::String(s_pcHtmlRootDir);
+            redfilename.Add(RED::String("MaterialLibrary\\"));
+            redfilename.Add(RED::String(redFile.data()));
 
-                m_pHCLuminateBridge->applyMaterial(nodeName.data(), redfilename, (bool)overrideMaterial, (bool)preserveColor);
-
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
-            }
+            m_pHLuminateServer->SetMaterial(con_info->sessionId, nodeName.data(), redfilename, (bool)overrideMaterial, (bool)preserveColor);
+            
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
         else if (0 == strcmp(url, "/SetLighting"))
         {
-            if (NULL == m_pHCLuminateBridge)
-            {
-                con_info->answerstring = response_error;
-                con_info->answercode = MHD_HTTP_OK;
-            }
-            else
-            {
-                int lightingId;
-                if (!paramStrToInt("lightingId", lightingId)) return MHD_NO;
+            int lightingId;
+            if (!paramStrToInt("lightingId", lightingId)) return MHD_NO;
 
-                switch (lightingId)
-                {
-                case 0: m_pHCLuminateBridge->setDefaultLightEnvironment(); break;
-                case 1: m_pHCLuminateBridge->setSunSkyLightEnvironment(); break;
-                case 3: m_pHCLuminateBridge->setEnvMapLightEnvironment("", true, RED::Color::WHITE); break;
-                break;
-                default: break;
-                }
+            m_pHLuminateServer->SetLighting(con_info->sessionId, lightingId);
 
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
-            }
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
         else if (0 == strcmp(url, "/SetRootTransform"))
         { 
-            if (NULL == m_pHCLuminateBridge)
-            {
-                con_info->answerstring = response_error;
-                con_info->answercode = MHD_HTTP_OK;
-            }
-            else
-            {
-                double* matrix;
-                if (!paramStrToDblArr("matrix", matrix)) return MHD_NO;
+            double* matrix;
+            if (!paramStrToDblArr("matrix", matrix)) return MHD_NO;
 
-                m_pHCLuminateBridge->syncRootTransform(matrix);
+            m_pHLuminateServer->SetRootTransform(con_info->sessionId, matrix);
 
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
-            }
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
         else if (0 == strcmp(url, "/DownloadImage"))
         {
-            if (NULL == m_pHCLuminateBridge)
-            {
-                con_info->answerstring = response_error;
-                con_info->answercode = MHD_HTTP_OK;
-            }
-            else
-            {
-                con_info->answerstring = response_success;
-                con_info->answercode = MHD_HTTP_OK;
-            }
+            m_pHLuminateServer->DownloadImage(con_info->sessionId);
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
@@ -963,6 +822,18 @@ main(int argc, char** argv)
     }
     printf("HOOPS Exchange Loaded.\n");
 
+    // Assign Luminate license.
+    m_pHLuminateServer = new HLuminateServer();
+
+    bool isActive = false;
+    if (!m_pHLuminateServer->Init(HOOPS_LICENSE))
+    {
+        printf("HOOPS Luminate initialize Failed.\n");
+        return 1;
+    }
+    
+    printf("HOOPS Luminate Initialized.\n");
+
     struct MHD_Daemon* daemon;
 
     daemon = MHD_start_daemon(MHD_USE_INTERNAL_POLLING_THREAD,
@@ -987,6 +858,9 @@ main(int argc, char** argv)
     MHD_stop_daemon(daemon);
 
     delete pExProcess;
+
+    m_pHLuminateServer->Terminate();
+    delete m_pHLuminateServer;
 
     return 0;
 }

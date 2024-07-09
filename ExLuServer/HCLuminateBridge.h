@@ -111,8 +111,6 @@ namespace HC_luminate_bridge {
 		// Lighting environment.
 		// Only one of the two can be active at same time.
 		LightingModel m_lightingModel;
-		DefaultLightingModel m_defaultLightingModel;
-		PhysicalSunSkyLightingModel m_sunSkyLightingModel;
 		EnvironmentMapLightingModel m_environmentMapLightingModel;
 
 		// segment update
@@ -168,7 +166,7 @@ namespace HC_luminate_bridge {
 		 */
 		bool resize(int a_windowWidth, int a_windowHeight, CameraInfo a_cameraInfo);
 
-		bool initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight,
+		bool initialize(void* a_osHandle, int a_windowWidth, int a_windowHeight,
 			std::string const& a_environmentMapFilepath, CameraInfo a_cameraInfo);
 
 		/**

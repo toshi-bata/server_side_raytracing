@@ -26,18 +26,29 @@
 
 namespace HC_luminate_bridge {
 
+    // Lighting environment.
+    static DefaultLightingModel m_defaultLightingModel;
+    static PhysicalSunSkyLightingModel m_sunSkyLightingModel;
+
     HCLuminateBridge::HCLuminateBridge() :
         m_frameIsComplete(false), m_newFrameIsRequired(true), m_axisTriad(),  m_bSyncCamera(false),
-        m_lightingModel(LightingModel::No), m_defaultLightingModel(), m_sunSkyLightingModel(),
+        m_lightingModel(LightingModel::No)/*, m_defaultLightingModel(), m_sunSkyLightingModel()*/,
         m_environmentMapLightingModel(), m_frameTracingMode(RED::FTF_PATH_TRACING), m_selectedSegmentTransformIsDirty(false)
     {
     }
 
     HCLuminateBridge::~HCLuminateBridge()
     {
+        RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
+
+        RED::IWindow* window = m_window->As<RED::IWindow>();
+        window->FrameTracingStop();
+
+        RED_RC rc = RED::Factory::DeleteInstance(m_window, iresourceManager->GetState());
     }
 
-    bool HCLuminateBridge::initialize(std::string const& a_license, void* a_osHandle, int a_windowWidth, int a_windowHeight,
+    bool HCLuminateBridge::initialize(void* a_osHandle, int a_windowWidth, int a_windowHeight,
         std::string const& a_environmentMapFilepath, CameraInfo a_cameraInfo)
     {
         RED_RC rc;
@@ -46,18 +57,18 @@ namespace HC_luminate_bridge {
         // Assign Luminate license.
         //////////////////////////////////////////
 
-        bool licenseIsActive;
-        rc = setLicense(a_license.c_str(), licenseIsActive);
-        if (rc != RED_OK || !licenseIsActive)
-            return false;
+        //bool licenseIsActive;
+        //rc = setLicense(a_license.c_str(), licenseIsActive);
+        //if (rc != RED_OK || !licenseIsActive)
+        //    return false;
 
         //////////////////////////////////////////
         // Select Luminate rendering mode.
         //////////////////////////////////////////
 
-        rc = setSoftTracerMode(1);
-        if (rc != RED_OK)
-            return false;
+        //rc = setSoftTracerMode(1);
+        //if (rc != RED_OK)
+        //    return false;
 
         //////////////////////////////////////////
         // Retrieve the resource manager from singleton
@@ -169,8 +180,10 @@ namespace HC_luminate_bridge {
         // If the scene is initialy empty, we do not
         // need to add it anywhere.
         //////////////////////////////////////////
-        rc = createDefaultModel(m_defaultLightingModel);
-        rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
+        if (NULL == m_defaultLightingModel.backgroundCubeImage)
+            rc = createDefaultModel(m_defaultLightingModel);
+        if (NULL == m_sunSkyLightingModel.backgroundCubeImage)
+            rc = createPhysicalSunSkyModel(m_sunSkyLightingModel);
 
         if (a_environmentMapFilepath.empty())
             rc = setDefaultLightEnvironment();
