@@ -272,7 +272,7 @@ void ExProcess::traverseTree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_nod
             iRet = A3DMiscCascadedAttributesCreate(&pAttr);
             iRet = A3DMiscCascadedAttributesPush(pAttr, pEntity, pParentAttr);
         }
-        else if (0 == strcmp(pTypeMsg, "kA3DTypeRiBrepModel"))
+        else if (0 == strcmp(pTypeMsg, "kA3DTypeRiBrepModel") || 0 == strcmp(pTypeMsg, "kA3DTypeRiPolyBrepModel"))
         {
             // Get node mesh
             A3DMeshData mesh_data;

@@ -183,6 +183,7 @@ class Main {
             closeOnEscape: true,
             position: {my: "left top", at: "left bottom", of: "#toolbarGr"},
         });
+        $('#checkOverrideMaterial').prop('checked', true);
 
         // Load material info from JSON file
         const url = "MaterialLibrary/Catalog/material_list.json";
@@ -380,7 +381,7 @@ class Main {
 
                 // Compute the node matrix of after rotation (multiplyMatrix * translationMatrix)
                 const matrix = Communicator.Matrix.multiply(roMatrix, trMatrix);
-
+                
                 // set root matrix
                 this._viewer.model.setNodeMatrix(root, matrix);
 
