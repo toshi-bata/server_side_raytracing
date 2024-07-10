@@ -181,6 +181,12 @@ namespace HC_luminate_bridge {
 		 */
 		RED::Object* getSelectedLuminateTransformNode(char* a_node_name);
 
+		/**
+		 * Get the Luminate window instance.
+		 * @return Luminate window instance.
+		 */
+		RED::Object* getWindow() { return m_window; }
+
 		RED::Color getSelectedLuminateDeffuseColor(char* a_node_name);
 
 		/**
@@ -211,10 +217,6 @@ namespace HC_luminate_bridge {
 		CameraInfo creteCameraInfo(double* a_target, double* a_up, double* a_position, int a_projection, double a_width, double a_height);
 		
 		bool saveImg(const char* filePath);
-
-		void stopFrameTracing();
-
-		void applyMaterial(const char* a_node_name, RED::String a_redfilename, bool bOverrideMaterial, bool bPreserveColor);
 
 		RED_RC syncRootTransform(double* matrix);
 

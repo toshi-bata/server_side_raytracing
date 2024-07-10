@@ -22,6 +22,8 @@ private:
 
 	std::map<std::string, LuminateSession> m_mHLuminateSession;
 
+	void stopFrameTracing(HCLuminateBridge* bridge);
+
 public:
 	bool Init(char const* license);
 	bool Terminate();

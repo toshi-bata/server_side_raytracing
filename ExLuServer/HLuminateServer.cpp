@@ -1,9 +1,24 @@
 #include "HLuminateServer.h"
+#include <cassert>
 #include <REDObject.h>
 #include <REDFactory.h>
 #include <REDIResourceManager.h>
 #include <REDILicense.h>
 #include <REDIOptions.h>
+#include <REDIShape.h>
+#include <REDIREDFile.h>
+#include <REDIDataManager.h>
+#include <REDIMaterialController.h>
+#include <REDIMaterialControllerProperty.h>
+
+#define RC_CHECK(rc)                                                               \
+    {                                                                              \
+        RED_RC red_rc_check = (rc);                                                \
+        if (red_rc_check != RED_OK) {                                              \
+            printf("RC_CHECK failed :: " #rc " :: code = 0x%04x\n", red_rc_check); \
+            assert(false);                                                         \
+        }                                                                          \
+    }
 
 using namespace HC_luminate_bridge;
 
@@ -106,7 +121,7 @@ bool HLuminateServer::Terminate()
     for (auto it = m_mHLuminateSession.begin(); it != m_mHLuminateSession.end(); ++it)
     {
         LuminateSession lumSession = it->second;
-        lumSession.pHCLuminateBridge->stopFrameTracing();
+        stopFrameTracing(lumSession.pHCLuminateBridge);
     }
     std::map<std::string, LuminateSession>().swap(m_mHLuminateSession);
 
@@ -250,13 +265,125 @@ bool HLuminateServer::Resize(std::string sessionId,
     return false;
 }
 
+void HLuminateServer::stopFrameTracing(HCLuminateBridge* bridge)
+{
+    RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
+    RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
+
+    if (iresmgr->GetState().GetNumber() > 1) {
+        RED::IWindow* iwindow = bridge->getWindow()->As<RED::IWindow>();
+        iwindow->FrameTracingStop();
+
+        iresmgr->BeginState();
+    }
+
+    bridge->resetFrame();
+}
+
 bool HLuminateServer::SetMaterial(std::string sessionId, const char* nodeName, RED::String redfilename, bool overrideMaterial, bool preserveColor)
 {
     if (m_mHLuminateSession.count(sessionId))
     {
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
 
-        lumSession.pHCLuminateBridge->applyMaterial(nodeName, redfilename, overrideMaterial, preserveColor);
+        // Apply material
+        HCLuminateBridge* bridge = lumSession.pHCLuminateBridge;
+        RED::Object* selectedTransformNode = bridge->getSelectedLuminateTransformNode((char*)nodeName);
+
+        if (selectedTransformNode != nullptr) {
+            RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
+            RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
+            RED::IShape* iShape = selectedTransformNode->As<RED::IShape>();
+
+            RED::Object* libraryMaterial = nullptr;
+            {
+                // As a new material will be created, some images will be created as well.
+                // Or images operations are immediate and should occur without ongoing rendering.
+                // Thus we need to stop current frame tracing.
+                stopFrameTracing(bridge);
+
+                // create the file instance
+                RED::Object* file = RED::Factory::CreateInstance(CID_REDFile);
+                RED::IREDFile* ifile = file->As<RED::IREDFile>();
+
+                // load the file
+                RED::StreamingPolicy policy;
+                RED::FileHeader fheader;
+                RED::FileInfo finfo;
+                RED::Vector< unsigned int > contexts;
+
+                RC_CHECK(ifile->Load(redfilename, iresmgr->GetState(), policy, fheader, finfo, contexts));
+
+                // release the file
+                RC_CHECK(RED::Factory::DeleteInstance(file, iresmgr->GetState()));
+
+                // retrieve the data manager
+                RED::IDataManager* idatamgr = iresmgr->GetDataManager()->As<RED::IDataManager>();
+
+                // parse the loaded contexts looking for the first material.
+                for (unsigned int c = 0; c < contexts.size(); ++c) {
+                    unsigned int mcount;
+                    RC_CHECK(idatamgr->GetMaterialsCount(mcount, contexts[c]));
+
+                    if (mcount > 0) {
+                        RC_CHECK(idatamgr->GetMaterial(libraryMaterial, contexts[c], 0));
+                        break;
+                    }
+                }
+            }
+
+            if (libraryMaterial != nullptr) {
+                // Clone the material to be able to change its properties without altering the library one.
+                RED::Object* clonedMaterial;
+                RC_CHECK(iresmgr->CloneMaterial(clonedMaterial, libraryMaterial, iresmgr->GetState()));
+
+                if (preserveColor)
+                {
+                    // Duplicate the material controller
+                    RED_RC returnCode;
+                    RED::Object* materialController = iresmgr->GetMaterialController(libraryMaterial);
+                    RED::Object* clonedMaterialController = RED::Factory::CreateMaterialController(*resmgr,
+                        clonedMaterial,
+                        "Realistic",
+                        "",
+                        "Tunable realistic material",
+                        "Realistic",
+                        "Redway3d",
+                        returnCode);
+
+                    RC_CHECK(returnCode);
+                    RED::IMaterialController* clonedIMaterialController =
+                        clonedMaterialController->As<RED::IMaterialController>();
+                    RC_CHECK(clonedIMaterialController->CopyFrom(*materialController, clonedMaterial));
+
+                    // Set HPS segment diffuse color as Luminate diffuse + reflection.
+
+                    RED::Object* diffuseColorProperty = clonedIMaterialController->GetProperty(RED_MATCTRL_DIFFUSE_COLOR);
+                    RED::IMaterialControllerProperty* iDiffuseColorProperty =
+                        diffuseColorProperty->As<RED::IMaterialControllerProperty>();
+                    iDiffuseColorProperty->SetColor(bridge->getSelectedLuminateDeffuseColor((char*)nodeName),
+                        iresmgr->GetState());
+
+                }
+
+                RED::Object* currentMaterial;
+                iShape->GetMaterial(currentMaterial);
+
+                if (overrideMaterial)
+                {
+                    iShape->SetMaterial(clonedMaterial, iresmgr->GetState());
+                }
+                else
+                {
+                    RED::IMaterial* currentIMaterial = currentMaterial->As<RED::IMaterial>();
+                    RC_CHECK(currentIMaterial->CopyFrom(*clonedMaterial, iresmgr->GetState()));
+                }
+
+                bridge->resetFrame();
+            }
+        }
+
+        //lumSession.pHCLuminateBridge->applyMaterial(nodeName, redfilename, overrideMaterial, preserveColor);
 
         return true;
     }
