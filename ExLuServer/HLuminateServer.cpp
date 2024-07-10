@@ -356,7 +356,7 @@ bool HLuminateServer::SetMaterial(std::string sessionId, const char* nodeName, R
                         clonedMaterialController->As<RED::IMaterialController>();
                     RC_CHECK(clonedIMaterialController->CopyFrom(*materialController, clonedMaterial));
 
-                    // Set HPS segment diffuse color as Luminate diffuse + reflection.
+                    // Set node diffuse color as Luminate diffuse + reflection.
 
                     RED::Object* diffuseColorProperty = clonedIMaterialController->GetProperty(RED_MATCTRL_DIFFUSE_COLOR);
                     RED::IMaterialControllerProperty* iDiffuseColorProperty =

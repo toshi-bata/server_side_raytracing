@@ -603,7 +603,6 @@ namespace HC_luminate_bridge {
         // a transformation on the conversion root to go right-handed.
         //////////////////////////////////////////
 
-        //Handedness viewHandedness = getViewHandedness(a_hpsView);
         Handedness viewHandedness = Handedness::RightHanded;
 
         if (viewHandedness == Handedness::LeftHanded) {
@@ -621,7 +620,7 @@ namespace HC_luminate_bridge {
         // current conversion data state during conversion.
         //////////////////////////////////////////
 
-        ConversionContextHPSPtr sceneInfoPtr = std::make_shared<ConversionContextHPS>();
+        ConversionContextNodePtr sceneInfoPtr = std::make_shared<ConversionContextNode>();
         sceneInfoPtr->rootTransformShape = rootTransformShape;
         sceneInfoPtr->defaultMaterialInfo = defaultMaterialInfo;
         sceneInfoPtr->viewHandedness = viewHandedness;
@@ -644,10 +643,10 @@ namespace HC_luminate_bridge {
     RED::Object* HCLuminateBridge::getSelectedLuminateTransformNode(char* a_node_name)
     {
         if (a_node_name != nullptr) {
-            ConversionContextHPS* conversionDataHPS = (ConversionContextHPS*)m_conversionDataPtr.get();
+            ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
 
-            if (0 < conversionDataHPS->segmentTransformShapeMap.count(a_node_name))
-                return conversionDataHPS->segmentTransformShapeMap[a_node_name];
+            if (0 < conversionDataNode->segmentTransformShapeMap.count(a_node_name))
+                return conversionDataNode->segmentTransformShapeMap[a_node_name];
         }
         return nullptr;
     }
@@ -655,10 +654,10 @@ namespace HC_luminate_bridge {
     RED::Color HCLuminateBridge::getSelectedLuminateDeffuseColor(char* a_node_name)
     {
         if (a_node_name != nullptr) {
-            ConversionContextHPS* conversionDataHPS = (ConversionContextHPS*)m_conversionDataPtr.get();
+            ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
 
-            if (0 < conversionDataHPS->segmentTransformShapeMap.count(a_node_name))
-                return conversionDataHPS->nodeDiffuseColorMap[a_node_name];
+            if (0 < conversionDataNode->segmentTransformShapeMap.count(a_node_name))
+                return conversionDataNode->nodeDiffuseColorMap[a_node_name];
         }
         return RED::Color::GREY;
     }
@@ -741,7 +740,7 @@ namespace HC_luminate_bridge {
         return materialInfo;
     }
 
-    RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextHPS& a_ioConversionContext, MeshPropaties meshProps)
+    RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextNode& a_ioConversionContext, MeshPropaties meshProps)
     {
         RED_RC rc;
 
@@ -1014,8 +1013,6 @@ namespace HC_luminate_bridge {
         // Create a new full-window viewpoint and add
         // it to window's viewpoint render list.
         //
-        // The default InsertViewpoint call sets VSP_SIZE_STRETCHED_AUTO_RATIO, which computes ratio differently from 3DF/HPS.
-        // Here we set VSP_SIZE_STRETCHED to handle the ratio ourselves.
         //////////////////////////////////////////
 
         RED::Object* viewpoint = RED::Factory::CreateInstance(CID_REDViewpoint);

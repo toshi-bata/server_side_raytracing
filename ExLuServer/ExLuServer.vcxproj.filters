@@ -13,54 +13,66 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Luminate">
+      <UniqueIdentifier>{0966e36a-2e2b-4827-a320-16bf4929a967}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Exchange">
+      <UniqueIdentifier>{cc1ea3dd-6a56-427e-86ec-03f138b84cd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Luminate">
+      <UniqueIdentifier>{48246b66-fffa-438a-ab01-21f061f452cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Exchange">
+      <UniqueIdentifier>{71383214-0e13-4011-9a55-6b1c9d51701a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ExProcess.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="utilities.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HCLuminateBridge.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="AxisTriad.cpp">
+      <Filter>Source Files\Luminate</Filter>
     </ClCompile>
     <ClCompile Include="ConversionTools.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Luminate</Filter>
     </ClCompile>
-    <ClCompile Include="LightingEnvironment.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AxisTriad.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="HCLuminateBridge.cpp">
+      <Filter>Source Files\Luminate</Filter>
     </ClCompile>
     <ClCompile Include="HLuminateServer.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Luminate</Filter>
+    </ClCompile>
+    <ClCompile Include="LightingEnvironment.cpp">
+      <Filter>Source Files\Luminate</Filter>
+    </ClCompile>
+    <ClCompile Include="ExProcess.cpp">
+      <Filter>Source Files\Exchange</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ExProcess.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="utilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HCLuminateBridge.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="AxisTriad.h">
+      <Filter>Header Files\Luminate</Filter>
     </ClInclude>
     <ClInclude Include="ConversionTools.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Luminate</Filter>
     </ClInclude>
-    <ClInclude Include="LightingEnvironment.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AxisTriad.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="HCLuminateBridge.h">
+      <Filter>Header Files\Luminate</Filter>
     </ClInclude>
     <ClInclude Include="HLuminateServer.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Luminate</Filter>
+    </ClInclude>
+    <ClInclude Include="LightingEnvironment.h">
+      <Filter>Header Files\Luminate</Filter>
+    </ClInclude>
+    <ClInclude Include="ExProcess.h">
+      <Filter>Header Files\Exchange</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

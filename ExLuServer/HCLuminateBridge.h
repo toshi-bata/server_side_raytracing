@@ -69,26 +69,24 @@ namespace HC_luminate_bridge {
 	using SegmentTransformShapeMap = std::map<std::string, RED::Object*>;
 
 	/**
-	* LuminateSceneInfo extension with specific HPS informations.
+	* LuminateSceneInfo extension with specific node informations.
 	*/
-	struct ConversionContextHPS : LuminateSceneInfo {
+	struct ConversionContextNode : LuminateSceneInfo {
 		SegmentMeshShapesMap segmentMeshShapesMap;
 		SegmentTransformShapeMap segmentTransformShapeMap;
 		std::map<std::string, RED::Color> nodeDiffuseColorMap;
 	};
 
-	using ConversionContextHPSPtr = std::shared_ptr<ConversionContextHPS>;
+	using ConversionContextNodePtr = std::shared_ptr<ConversionContextNode>;
 
 	/**
 	 * Base virtual class of helpers making usage of the bridge really easy.
-	 * It is implemented by LuminateBridge3DF and LuminateBridgeHPS with 3DF/HPS
-	 * specificities.
 	 */
 	class HCLuminateBridge {
 		// Instance Fields:
 		// ----------------
 
-	protected:
+	private:
 		// Window.
 		RED::Object* m_window;
 		
@@ -145,7 +143,7 @@ namespace HC_luminate_bridge {
 		void resetFrame();
 
 		/**
-		 * Synchronize Luminate scene with the current 3DF/HPS scene.
+		 * Synchronize Luminate scene with the current scene.
 		 * The previous scene will be destroyed.
 		 * @return True if success, otherwise False.
 		 */
@@ -210,7 +208,7 @@ namespace HC_luminate_bridge {
 
 		/**
 		* Set sync camera.
-		* @param[in] a_sync Whether to synchronize cametra between HPS and Luminate.
+		* @param[in] a_sync Whether to synchronize cametra between HC and Luminate.
 		 */
 		void setSyncCamera(const bool a_sync, CameraInfo a_cameraInfo) { m_bSyncCamera = a_sync; m_cameraInfo = a_cameraInfo; }
 
@@ -229,7 +227,7 @@ namespace HC_luminate_bridge {
 		RED_RC createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera);
 
 		/**
-		 * Synchronize the Luminate camera with the 3DF/HPS one.
+		 * Synchronize the Luminate camera with the HC one.
 		 * @return RED_OK if success, otherwise error code.
 		 */
 		RED_RC syncLuminateCamera(CameraInfo a_cameraInfo);
@@ -321,7 +319,7 @@ namespace HC_luminate_bridge {
 
 	RED_RC checkFrameStatistics(RED::Object* a_window, const int a_num_vrl, FrameStatistics* a_stats, bool& a_ioFrameIsComplete);
 
-	RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextHPS& a_ioConversionContext, MeshPropaties aMeshProps);
+	RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextNode& a_ioConversionContext, MeshPropaties aMeshProps);
 
 	RED::Object* convertHEMeshToREDMeshShape(const RED::State& a_state, A3DMeshData a_meshData);
 
