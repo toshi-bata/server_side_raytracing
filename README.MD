@@ -19,18 +19,18 @@ This demo runs raytracing rendring in server side using offscreen buffer of HOOP
 &emsp;+ server_side_raytracing<br>
 &emsp;&emsp;+ ExLuServer<br>
 &emsp;&emsp;&emsp;+ _VS2019.bat (for Windows)<br>
-&emsp;&emsp;+ win64 (copy win64 folder from <Communicator SDK>\authoring\converter\bin)<br>
-&emsp;&emsp;&emsp;+ REDCore.dll (copy from <Luminate SDK>\BuildImage\Win64)<br>
-&emsp;&emsp;&emsp;+ Embree.dll (copy from <Luminate SDK>\BuildImage\Win64)<br>
-&emsp;&emsp;+ win64d (copy win64d folder from <Communicator SDK>\authoring\converter\bin)<br>
-&emsp;&emsp;&emsp;+ REDCore.dll (copy from <Luminate SDK>\BuildImage\Win64)<br>
-&emsp;&emsp;&emsp;+ Embree.dll (copy from <Luminate SDK>\BuildImage\Win64)<br>
+&emsp;&emsp;+ win64 (copy win64 folder from Communicator_SDK\authoring\converter\bin)<br>
+&emsp;&emsp;&emsp;+ REDCore.dll (copy from Luminate_SDK\BuildImage\Win64)<br>
+&emsp;&emsp;&emsp;+ Embree.dll (copy from Luminate_SDK\BuildImage\Win64)<br>
+&emsp;&emsp;+ win64d (copy win64d folder from Communicator_SDK\authoring\converter\bin)<br>
+&emsp;&emsp;&emsp;+ REDCore.dll (copy from Luminate_SDK\BuildImage\Win64)<br>
+&emsp;&emsp;&emsp;+ Embree.dll (copy from Luminate_SDK\BuildImage\Win64)<br>
 &emsp;&emsp;+ main.html<br>
 &emsp;&emsp;+ js<br>
 &emsp;&emsp;&emsp;+ main.js<br>
 &emsp;&emsp;+ HttpServer.js<br>
 &emsp;&emsp;+ package.json<br>
-&emsp;+ src (copy src folder here from <Communicator SDK>\web_viewer)<br>
+&emsp;+ src (copy src folder here from Communicator_SDK\web_viewer)<br>
 
 ### Build ExServer
 ExLuServer is a server side console application which is using HOOPS Exchange, Luminate and HC libconverter. <br>
@@ -51,7 +51,7 @@ ExLuServer is a server side console application which is using HOOPS Exchange, L
 3. Register the following enviroment valiables<br>
     Name: `EX_SERVER_WORKING_DIR`&emsp;Value: `path¥to¥temp¥folder`<br>
 4. Start ExLuServer (giving a port number in command line argument)<br>
-    Windows: `ExServer 8888`<br>
+    Windows: `ExLuServer 8888`<br>
 5. Open the main.html with server's port number (using Chrome)<br>
     `http://localhost:8000/main.html?viewer=CSR&instance=_empty&port=8888`
     
