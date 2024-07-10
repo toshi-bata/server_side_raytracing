@@ -40,7 +40,6 @@ using namespace HC_luminate_bridge;
 
 static char s_pcWorkingDir[256];
 static char s_pcScModelsDir[256];
-static char s_pcHtmlRootDir[256];
 static char s_pcModelName[256];
 static std::map<std::string, std::string> s_mParams;
 
@@ -488,11 +487,12 @@ answer_to_connection(void* cls,
             char filePath[FILENAME_MAX];
             
             // Delete previous rendering image
-            sprintf(filePath, "%s%s.png", s_pcHtmlRootDir, con_info->sessionId);
 
 #ifndef _WIN32
+            sprintf(filePath, "../%s.png", con_info->sessionId);
             delete_files(filePath);
 #else
+            sprintf(filePath, "..\\%s.png", con_info->sessionId);
             {
                 wchar_t wFilePath[_MAX_FNAME];
                 mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
@@ -501,11 +501,11 @@ answer_to_connection(void* cls,
 #endif
             // Delete thumbnail image
 #ifndef _WIN32
-            sprintf(filePath, "%sLighting/EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+            sprintf(filePath, "../Lighting/EnvMapThumb-%s.png", con_info->sessionId);
             delete_files(filePath);
 #else
             {
-                sprintf(filePath, "%sLighting\\EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+                sprintf(filePath, "..\\Lighting\\EnvMapThumb-%s.png", con_info->sessionId);
                 wchar_t wFilePath[_MAX_FNAME];
                 mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
                 _wremove(wFilePath);
@@ -558,9 +558,9 @@ answer_to_connection(void* cls,
                     // Load environment map file
                     char thumbnailPath[FILENAME_MAX];
 #ifndef _WIN32
-                    sprintf(thumbnailPath, "%sLighting/EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+                    sprintf(thumbnailPath, "../Lighting/EnvMapThumb-%s.png", con_info->sessionId);
 #else
-                    sprintf(thumbnailPath, "%sLighting\\EnvMapThumb-%s.png", s_pcHtmlRootDir, con_info->sessionId);
+                    sprintf(thumbnailPath, "..\\Lighting\\EnvMapThumb-%s.png", con_info->sessionId);
 #endif
                     if (m_pHLuminateServer->LoadEnvMapFile(con_info->sessionId, filePath, thumbnailPath))
                         floatArr.push_back(1);
@@ -670,7 +670,11 @@ answer_to_connection(void* cls,
         {
 
             char filePath[FILENAME_MAX];
-            sprintf(filePath, "%s%s.png", s_pcHtmlRootDir, con_info->sessionId);
+#ifndef _WIN32
+            sprintf(filePath, "../%s.png", con_info->sessionId);
+#else
+            sprintf(filePath, "C:\\git\\toshi-bata\\server_side_raytracing\\%s.png", con_info->sessionId);
+#endif
             std::vector<float> floatArr = m_pHLuminateServer->Draw(con_info->sessionId, filePath);
 
             con_info->answerstring = response_success;
@@ -735,8 +739,7 @@ answer_to_connection(void* cls,
             if (!paramStrToInt("overrideMaterial", overrideMaterial)) return MHD_NO;
 
             // Get material
-            RED::String redfilename = RED::String(s_pcHtmlRootDir);
-            redfilename.Add(RED::String("MaterialLibrary\\"));
+            RED::String redfilename = RED::String("..\\MaterialLibrary\\");
             redfilename.Add(RED::String(redFile.data()));
 
             m_pHLuminateServer->SetMaterial(con_info->sessionId, nodeName.data(), redfilename, (bool)overrideMaterial, (bool)preserveColor);
@@ -802,17 +805,11 @@ main(int argc, char** argv)
     printf("EX_SERVER_WORKING_DIR=%s\n", s_pcWorkingDir);
 
     // Get SC model dir
-    GetEnvironmentVariablePath("SC_MODELS_DIR", s_pcScModelsDir, true);
+    GetEnvironmentVariablePath("HCOMMUNICATOR_INSTALL_DIR", s_pcScModelsDir, true);
     if (0 == strlen(s_pcScModelsDir))
         return 1;
+    strcat(s_pcScModelsDir, "quick_start\\converted_models\\user\\sc_models\\");
     printf("SC_MODELS_DIR=%s\n", s_pcScModelsDir);
-
-    // Get html root dir
-    GetEnvironmentVariablePath("HTML_ROOT_DIR", s_pcHtmlRootDir, true);
-    if (0 == strlen(s_pcHtmlRootDir))
-        return 1;
-    printf("HTML_ROOT_DIR=%s\n", s_pcHtmlRootDir);
-
 
     pExProcess = new ExProcess();
     if (!pExProcess->Init())

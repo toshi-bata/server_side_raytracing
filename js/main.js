@@ -488,8 +488,8 @@ class Main {
                         const params = this._getRenderingParams();
                         this._serverCaller.CallServerPost("PrepareRendering", params).then(() => {
                             $('[data-command="Raytracing"]').prop("disabled", false).css("background-color", "gainsboro");
+                            $("#loadingImage").hide();
                         });
-                        $("#loadingImage").hide();
                     });
                 });
             });
