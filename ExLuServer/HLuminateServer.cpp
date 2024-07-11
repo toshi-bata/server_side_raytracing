@@ -205,6 +205,7 @@ bool HLuminateServer::ClearSession(std::string sessionId)
     if (m_mHLuminateSession.count(sessionId))
     {
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
+        lumSession.pHCLuminateBridge->resetFrame();
         delete lumSession.pHCLuminateBridge;
 
         if (NULL != lumSession.hwnd)

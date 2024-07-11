@@ -38,10 +38,10 @@ namespace HC_luminate_bridge {
         RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
         RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
 
-        RED::IWindow* window = m_window->As<RED::IWindow>();
-        window->FrameTracingStop();
+        RED::IWindow* iwindow = m_window->As<RED::IWindow>();
+        iwindow->FrameTracingStop();
 
-        RED_RC rc = RED::Factory::DeleteInstance(m_window, iresourceManager->GetState());
+        //rc = RED::Factory::DeleteInstance(m_window, iresourceManager->GetState());
     }
 
     bool HCLuminateBridge::initialize(void* a_osHandle, int a_windowWidth, int a_windowHeight,
