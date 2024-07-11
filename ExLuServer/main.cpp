@@ -673,7 +673,7 @@ answer_to_connection(void* cls,
 #ifndef _WIN32
             sprintf(filePath, "../%s.png", con_info->sessionId);
 #else
-            sprintf(filePath, "C:\\git\\toshi-bata\\server_side_raytracing\\%s.png", con_info->sessionId);
+            sprintf(filePath, "..\\%s.png", con_info->sessionId);
 #endif
             std::vector<float> floatArr = m_pHLuminateServer->Draw(con_info->sessionId, filePath);
 
