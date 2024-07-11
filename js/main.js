@@ -79,8 +79,14 @@ class Main {
                           }, "1000");
                     }
                 },
+                timeoutWarning: () => {
+                    // If rendering process is going on, continue the process
+                    if (null != this._timerId) {
+                        this._viewer.setClientTimeout(15, 14);
+                    }
+                },
                 timeout: () => {
-                    this._serverCaller.CallServerPost("Clear");
+                    //this._serverCaller.CallServerPost("Clear");
                     console.log("Timeout");
                 }
             });
@@ -328,8 +334,12 @@ class Main {
             $(e.currentTarget).data("on", false).css("background-color", "gainsboro");
         });
 
-        // Toolbar
+        // Toolbar default
         $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
+        $('[data-command="SetMaterial"]').prop("disabled", true).css("background-color", "darkgrey");
+        $('[data-command="SetLighting"]').prop("disabled", true).css("background-color", "darkgrey");
+        $('[data-command="UpVector"]').prop("disabled", true).css("background-color", "darkgrey");
+        $('[data-command="Download"]').prop("disabled", true).css("background-color", "darkgrey");
 
         // Slider
         $("#opacitySlider").slider({
@@ -580,6 +590,12 @@ class Main {
             const params = this._getRenderingParams();
 
             this._serverCaller.CallServerPost(command, params).then(() => {
+                // Enabling commands
+                $('[data-command="SetMaterial"]').prop("disabled", false).css("background-color", "gainsboro");
+                $('[data-command="SetLighting"]').prop("disabled", false).css("background-color", "gainsboro");
+                $('[data-command="UpVector"]').prop("disabled", false).css("background-color", "gainsboro");
+                $('[data-command="Download"]').prop("disabled", false).css("background-color", "gainsboro");
+
                 $("#loadingImage").hide();
                 this._invokeDraw();
             });
