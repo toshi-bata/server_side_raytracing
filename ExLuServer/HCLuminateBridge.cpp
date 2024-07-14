@@ -458,6 +458,64 @@ namespace HC_luminate_bridge {
         return rc;
     }
 
+    bool HCLuminateBridge::addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList)
+    {
+        ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
+        if (nullptr == conversionDataNode->rootTransformShape)
+            return false;
+
+        RED::ITransformShape* itransform = conversionDataNode->rootTransformShape->As<RED::ITransformShape>();
+
+        RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
+
+        RED::Object* mesh = RED::Factory::CreateInstance(CID_REDMeshShape);
+        RED::IMeshShape* imesh = mesh->As<RED::IMeshShape>();
+
+        std::vector<float> fPoints(points, points + pointCnt);
+        RC_TEST(imesh->SetArray(RED::MCL_VERTEX, fPoints.data(), pointCnt / 3, 3, RED::MFT_FLOAT, iresmgr->GetState()));
+
+        RC_TEST(imesh->AddTriangles(faceList, faceCnt, iresmgr->GetState()));
+
+        std::vector<double> normals;
+        for (int i = 0; i < pointCnt / 3; i++)
+        {
+            normals.push_back(0.0);
+            normals.push_back(0.0);
+            normals.push_back(1.0);
+        }
+        RC_TEST(imesh->SetArray(RED::MCL_NORMAL, normals.data(), pointCnt / 3, 3, RED::MFT_FLOAT, iresmgr->GetState()));
+        std::vector<double>().swap(normals);
+
+        RC_TEST(imesh->BuildTextureCoordinates(RED::MESH_CHANNEL::MCL_TEX0, RED::MTCM_BOX, RED::Matrix::IDENTITY, iresmgr->GetState()));
+        
+        RC_TEST(itransform->AddChild(mesh, RED_SHP_DAG_NO_UPDATE, iresmgr->GetState()));
+
+        conversionDataNode->floorMesh = mesh;
+
+        return true;
+    }
+
+    bool HCLuminateBridge::deleteFloorMesh()
+    {
+        ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
+        if (nullptr == conversionDataNode->floorMesh)
+            return false;
+
+        RED::ITransformShape* itransform = conversionDataNode->rootTransformShape->As<RED::ITransformShape>();
+        
+        RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
+
+        RC_CHECK(itransform->RemoveChild(conversionDataNode->floorMesh, RED_SHP_DAG_NO_UPDATE, iresmgr->GetState()));
+
+        conversionDataNode->floorMesh = nullptr;
+
+        resetFrame();
+
+        return true;
+    }
+
     RED_RC
     HCLuminateBridge::createCamera(RED::Object* a_window, int a_windowWidh, int a_windowHeight, int a_vrlId, RED::Object*& a_outCamera)
     {
@@ -594,7 +652,12 @@ namespace HC_luminate_bridge {
         //////////////////////////////////////////
 
         RED::Object* rootTransformShape = RED::Factory::CreateInstance(CID_REDTransformShape);
-        RED::ITransformShape* itransform = rootTransformShape->As<RED::ITransformShape>();
+        RED::ITransformShape* irootTtransform = rootTransformShape->As<RED::ITransformShape>();
+
+        RED::Object* modelTransformShape = RED::Factory::CreateInstance(CID_REDTransformShape);
+        RED::ITransformShape* itransform = modelTransformShape->As<RED::ITransformShape>();
+
+        irootTtransform->AddChild(modelTransformShape, RED_SHP_DAG_NO_UPDATE, iresourceManager->GetState());
 
         //////////////////////////////////////////
         // Manage scene handedness.
@@ -622,6 +685,7 @@ namespace HC_luminate_bridge {
 
         ConversionContextNodePtr sceneInfoPtr = std::make_shared<ConversionContextNode>();
         sceneInfoPtr->rootTransformShape = rootTransformShape;
+        sceneInfoPtr->modelTransformShape = modelTransformShape;
         sceneInfoPtr->defaultMaterialInfo = defaultMaterialInfo;
         sceneInfoPtr->viewHandedness = viewHandedness;
 
@@ -651,6 +715,13 @@ namespace HC_luminate_bridge {
         return nullptr;
     }
 
+    RED::Object* HCLuminateBridge::getFloorMesh()
+    {
+        ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
+
+        return conversionDataNode->floorMesh;
+    }
+
     RED::Color HCLuminateBridge::getSelectedLuminateDeffuseColor(char* a_node_name)
     {
         if (a_node_name != nullptr) {
@@ -662,12 +733,12 @@ namespace HC_luminate_bridge {
         return RED::Color::GREY;
     }
 
-    RED_RC HCLuminateBridge::syncRootTransform(double* matrix)
+    RED_RC HCLuminateBridge::syncModelTransform(double* matrix)
     {
         RED::Object* resourceManager = RED::Factory::CreateInstance(CID_REDResourceManager);
         RED::IResourceManager* iresourceManager = resourceManager->As<RED::IResourceManager>();
         LuminateSceneInfoPtr sceneInfo = m_conversionDataPtr;
-        RED::ITransformShape* itransform = sceneInfo->rootTransformShape->As<RED::ITransformShape>();
+        RED::ITransformShape* itransform = sceneInfo->modelTransformShape->As<RED::ITransformShape>();
 
         // Apply transform matrix.
         RED::Matrix redMatrix;

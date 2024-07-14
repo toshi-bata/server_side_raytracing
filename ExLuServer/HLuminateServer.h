@@ -23,6 +23,7 @@ private:
 	std::map<std::string, LuminateSession> m_mHLuminateSession;
 
 	void stopFrameTracing(HCLuminateBridge* bridge);
+	bool loadLibMaterial(HCLuminateBridge* bridge, RED::String redfilename, RED::Object*& libraryMaterial);
 
 public:
 	bool Init(char const* license);
@@ -43,7 +44,9 @@ public:
 		int width, int height);
 	bool SetMaterial(std::string sessionId, const char* nodeName, RED::String redfilename, bool overrideMaterial, bool preserveColor);
 	bool SetLighting(std::string sessionId, int lightingId);
-	bool SetRootTransform(std::string sessionId, double* matrix);
+	bool SetModelTransform(std::string sessionId, double* matrix);
 	bool DownloadImage(std::string sessionId);
+	bool AddFloorMesh(const std::string sessionId, const int pointCnt, const double* points, const int faceCnt, const int* faceList);
+	bool DeleteFloorMesh(const std::string sessionId);
 };
 

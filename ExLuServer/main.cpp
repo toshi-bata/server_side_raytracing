@@ -239,6 +239,24 @@ bool paramStrToDblArr(const char* key, double*& dblArr)
     return true;
 }
 
+bool paramStrToIntArr(const char* key, int*& intArr)
+{
+    std::string sVal = s_mParams[std::string(key)];
+    if (sVal.empty()) return false;
+
+    std::vector<std::string> strArr;
+    split(sVal.c_str(), ",", strArr);
+
+    int entCnt = strArr.size();
+
+    intArr = new int[entCnt];
+
+    for (int i = 0; i < entCnt; i++)
+        intArr[i] = std::atof(strArr[i].c_str());
+
+    return true;
+}
+
 bool paramStrToChr(const char *key, char &cha)
 {
 	std::string sVal = s_mParams[std::string(key)];
@@ -766,7 +784,7 @@ answer_to_connection(void* cls,
             double* matrix;
             if (!paramStrToDblArr("matrix", matrix)) return MHD_NO;
 
-            m_pHLuminateServer->SetRootTransform(con_info->sessionId, matrix);
+            m_pHLuminateServer->SetModelTransform(con_info->sessionId, matrix);
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
@@ -776,6 +794,36 @@ answer_to_connection(void* cls,
         else if (0 == strcmp(url, "/DownloadImage"))
         {
             m_pHLuminateServer->DownloadImage(con_info->sessionId);
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
+
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/AddFloorMesh"))
+        {
+            int pointCnt, faceCnt;
+            if (!paramStrToInt("pointCnt", pointCnt)) return MHD_NO;
+            if (!paramStrToInt("faceCnt", faceCnt)) return MHD_NO;
+
+            double* points;
+            if (!paramStrToDblArr("points", points)) return MHD_NO;
+
+            int* faceList;
+            if (!paramStrToIntArr("faceList", faceList)) return MHD_NO;
+
+            m_pHLuminateServer->DeleteFloorMesh(con_info->sessionId);
+
+            m_pHLuminateServer->AddFloorMesh(con_info->sessionId, pointCnt, points, faceCnt, faceList);
+
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
+
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/DeleteFloorMesh"))
+        {
+            m_pHLuminateServer->DeleteFloorMesh(con_info->sessionId);
+
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
 

@@ -281,6 +281,48 @@ void HLuminateServer::stopFrameTracing(HCLuminateBridge* bridge)
     bridge->resetFrame();
 }
 
+bool HLuminateServer::loadLibMaterial(HCLuminateBridge* bridge, RED::String redfilename, RED::Object*& libraryMaterial)
+{
+    RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
+    RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
+
+    // As a new material will be created, some images will be created as well.
+    // Or images operations are immediate and should occur without ongoing rendering.
+    // Thus we need to stop current frame tracing.
+    stopFrameTracing(bridge);
+
+    // create the file instance
+    RED::Object* file = RED::Factory::CreateInstance(CID_REDFile);
+    RED::IREDFile* ifile = file->As<RED::IREDFile>();
+
+    // load the file
+    RED::StreamingPolicy policy;
+    RED::FileHeader fheader;
+    RED::FileInfo finfo;
+    RED::Vector< unsigned int > contexts;
+
+    RC_CHECK(ifile->Load(redfilename, iresmgr->GetState(), policy, fheader, finfo, contexts));
+
+    // release the file
+    RC_CHECK(RED::Factory::DeleteInstance(file, iresmgr->GetState()));
+
+    // retrieve the data manager
+    RED::IDataManager* idatamgr = iresmgr->GetDataManager()->As<RED::IDataManager>();
+
+    // parse the loaded contexts looking for the first material.
+    for (unsigned int c = 0; c < contexts.size(); ++c) {
+        unsigned int mcount;
+        RC_CHECK(idatamgr->GetMaterialsCount(mcount, contexts[c]));
+
+        if (mcount > 0) {
+            RC_CHECK(idatamgr->GetMaterial(libraryMaterial, contexts[c], 0));
+            break;
+        }
+    }
+
+    return true;
+}
+
 bool HLuminateServer::SetMaterial(std::string sessionId, const char* nodeName, RED::String redfilename, bool overrideMaterial, bool preserveColor)
 {
     if (m_mHLuminateSession.count(sessionId))
@@ -297,41 +339,7 @@ bool HLuminateServer::SetMaterial(std::string sessionId, const char* nodeName, R
             RED::IShape* iShape = selectedTransformNode->As<RED::IShape>();
 
             RED::Object* libraryMaterial = nullptr;
-            {
-                // As a new material will be created, some images will be created as well.
-                // Or images operations are immediate and should occur without ongoing rendering.
-                // Thus we need to stop current frame tracing.
-                stopFrameTracing(bridge);
-
-                // create the file instance
-                RED::Object* file = RED::Factory::CreateInstance(CID_REDFile);
-                RED::IREDFile* ifile = file->As<RED::IREDFile>();
-
-                // load the file
-                RED::StreamingPolicy policy;
-                RED::FileHeader fheader;
-                RED::FileInfo finfo;
-                RED::Vector< unsigned int > contexts;
-
-                RC_CHECK(ifile->Load(redfilename, iresmgr->GetState(), policy, fheader, finfo, contexts));
-
-                // release the file
-                RC_CHECK(RED::Factory::DeleteInstance(file, iresmgr->GetState()));
-
-                // retrieve the data manager
-                RED::IDataManager* idatamgr = iresmgr->GetDataManager()->As<RED::IDataManager>();
-
-                // parse the loaded contexts looking for the first material.
-                for (unsigned int c = 0; c < contexts.size(); ++c) {
-                    unsigned int mcount;
-                    RC_CHECK(idatamgr->GetMaterialsCount(mcount, contexts[c]));
-
-                    if (mcount > 0) {
-                        RC_CHECK(idatamgr->GetMaterial(libraryMaterial, contexts[c], 0));
-                        break;
-                    }
-                }
-            }
+            loadLibMaterial(bridge, redfilename, libraryMaterial);
 
             if (libraryMaterial != nullptr) {
                 // Clone the material to be able to change its properties without altering the library one.
@@ -410,13 +418,13 @@ bool HLuminateServer::SetLighting(std::string sessionId, int lightingId)
     return false;
 }
 
-bool HLuminateServer::SetRootTransform(std::string sessionId, double* matrix)
+bool HLuminateServer::SetModelTransform(std::string sessionId, double* matrix)
 {
     if (m_mHLuminateSession.count(sessionId))
     {
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
 
-        lumSession.pHCLuminateBridge->syncRootTransform(matrix);
+        lumSession.pHCLuminateBridge->syncModelTransform(matrix);
 
         return true;
     }
@@ -428,6 +436,51 @@ bool HLuminateServer::DownloadImage(std::string sessionId)
     if (m_mHLuminateSession.count(sessionId))
     {
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
+        return true;
+    }
+    return false;
+}
+
+bool HLuminateServer::AddFloorMesh(const std::string sessionId, const int pointCnt, const double* points, const int faceCnt, const int* faceList)
+{
+    if (m_mHLuminateSession.count(sessionId))
+    {
+        LuminateSession lumSession = m_mHLuminateSession[sessionId];
+        if (lumSession.pHCLuminateBridge->addFloorMesh(pointCnt, points, faceCnt, faceList))
+        {
+            RED::Object* mesh = lumSession.pHCLuminateBridge->getFloorMesh();
+            if (nullptr == mesh)
+                return false;
+
+            RED::Object* libraryMaterial = nullptr;
+            loadLibMaterial(lumSession.pHCLuminateBridge, "..\\MaterialLibrary\\glass_clear_glass.red", libraryMaterial);
+
+            RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
+            RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
+            
+            // Clone the material to be able to change its properties without altering the library one.
+            RED::Object* clonedMaterial;
+            RC_CHECK(iresmgr->CloneMaterial(clonedMaterial, libraryMaterial, iresmgr->GetState()));
+
+            RED::IShape* iShape = mesh->As< RED::IShape >();
+            iShape->SetMaterial(clonedMaterial, iresmgr->GetState());
+
+            return true;
+        }
+
+        return false;
+    }
+    return false;
+}
+
+bool HLuminateServer::DeleteFloorMesh(const std::string sessionId)
+{
+    if (m_mHLuminateSession.count(sessionId))
+    {
+        LuminateSession lumSession = m_mHLuminateSession[sessionId];
+
+        lumSession.pHCLuminateBridge->deleteFloorMesh();
+
         return true;
     }
     return false;

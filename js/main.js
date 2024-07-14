@@ -17,6 +17,8 @@ class Main {
         this._prevCamera;
         this._setMaterialOp;
         this._setMaterialOpHandle;
+        this._createFloorOp;
+        this._createFloorOpHandle;
         this._materialDB;
         this._currentMaterialName;
         this._currentMaterialId;
@@ -93,6 +95,9 @@ class Main {
 
             this._setMaterialOp = new SetMaterialOperator(this._viewer, this);
             this._setMaterialOpHandle = this._viewer.registerCustomOperator(this._setMaterialOp);
+            this._createFloorOp = new CreateFloorOperator(this._viewer, this);
+            this._createFloorOpHandle = this._viewer.registerCustomOperator(this._createFloorOp);
+
             this._viewer.start();
         });
     }
@@ -307,6 +312,16 @@ class Main {
                 case "UpVector": {
                     $('#upVectorDlg').dialog('open');
                 } break;
+                case "CreateFloor": {
+                    if (!isOn) {
+                        this._viewer.operatorManager.push(this._createFloorOpHandle);
+                        this._createFloorOp.Init();
+                    }
+                    else {
+                        this._deleteFloor();
+                        this._createFloorOp.Term();
+                    }
+                } break;
                 case "Download": {
                     const serverName = this._sessionId + ".png";
                     const downloadName = "image.png";
@@ -339,6 +354,7 @@ class Main {
         $('[data-command="SetMaterial"]').prop("disabled", true).css("background-color", "darkgrey");
         $('[data-command="SetLighting"]').prop("disabled", true).css("background-color", "darkgrey");
         $('[data-command="UpVector"]').prop("disabled", true).css("background-color", "darkgrey");
+        $('[data-command="CreateFloor"]').prop("disabled", true).css("background-color", "darkgrey");
         $('[data-command="Download"]').prop("disabled", true).css("background-color", "darkgrey");
 
         // Slider
@@ -594,6 +610,7 @@ class Main {
                 $('[data-command="SetMaterial"]').prop("disabled", false).css("background-color", "gainsboro");
                 $('[data-command="SetLighting"]').prop("disabled", false).css("background-color", "gainsboro");
                 $('[data-command="UpVector"]').prop("disabled", false).css("background-color", "gainsboro");
+                $('[data-command="CreateFloor"]').prop("disabled", false).css("background-color", "gainsboro");
                 $('[data-command="Download"]').prop("disabled", false).css("background-color", "gainsboro");
 
                 $("#loadingImage").hide();
@@ -715,5 +732,14 @@ class Main {
             $("#loadingImage").hide();
         };
         oReq.send();
+    }
+
+    invokeCreateFloor(params) {
+        this._serverCaller.CallServerPost("AddFloorMesh", params);
+    }
+
+    _deleteFloor() {
+        this._serverCaller.CallServerPost("DeleteFloorMesh", {});
+        this._setDefaultOperators();
     }
 }

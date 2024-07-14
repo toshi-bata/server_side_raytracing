@@ -178,6 +178,8 @@ namespace HC_luminate_bridge {
 		 * @return Selected luminate transform node object pointer.
 		 */
 		RED::Object* getSelectedLuminateTransformNode(char* a_node_name);
+		
+		RED::Object* getFloorMesh();
 
 		/**
 		 * Get the Luminate window instance.
@@ -216,7 +218,10 @@ namespace HC_luminate_bridge {
 		
 		bool saveImg(const char* filePath);
 
-		RED_RC syncRootTransform(double* matrix);
+		RED_RC syncModelTransform(double* matrix);
+
+		bool addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList);
+		bool deleteFloorMesh();
 
 	private:
 		/**

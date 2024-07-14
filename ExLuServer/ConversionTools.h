@@ -213,6 +213,8 @@ namespace HC_luminate_bridge {
     struct LuminateSceneInfo {
         Handedness viewHandedness = Handedness::LeftHanded;
         RED::Object* rootTransformShape = nullptr;
+        RED::Object* modelTransformShape = nullptr;
+        RED::Object* floorMesh = nullptr;
         ImageNameToLuminateMap imageNameToLuminateMap;
         TextureNameImageNameMap textureNameImageNameMap;
         PBRToRealisticConversionMap pbrToRealisticConversionMap;
