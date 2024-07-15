@@ -446,24 +446,12 @@ bool HLuminateServer::AddFloorMesh(const std::string sessionId, const int pointC
     if (m_mHLuminateSession.count(sessionId))
     {
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
+
         if (lumSession.pHCLuminateBridge->addFloorMesh(pointCnt, points, faceCnt, faceList))
         {
             RED::Object* mesh = lumSession.pHCLuminateBridge->getFloorMesh();
             if (nullptr == mesh)
                 return false;
-
-            RED::Object* libraryMaterial = nullptr;
-            loadLibMaterial(lumSession.pHCLuminateBridge, "..\\MaterialLibrary\\glass_clear_glass.red", libraryMaterial);
-
-            RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
-            RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
-            
-            // Clone the material to be able to change its properties without altering the library one.
-            RED::Object* clonedMaterial;
-            RC_CHECK(iresmgr->CloneMaterial(clonedMaterial, libraryMaterial, iresmgr->GetState()));
-
-            RED::IShape* iShape = mesh->As< RED::IShape >();
-            iShape->SetMaterial(clonedMaterial, iresmgr->GetState());
 
             return true;
         }
@@ -480,6 +468,19 @@ bool HLuminateServer::DeleteFloorMesh(const std::string sessionId)
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
 
         lumSession.pHCLuminateBridge->deleteFloorMesh();
+
+        return true;
+    }
+    return false;
+}
+
+bool HLuminateServer::UpdateFloorMaterial(const std::string sessionId, const double* color)
+{
+    if (m_mHLuminateSession.count(sessionId))
+    {
+        LuminateSession lumSession = m_mHLuminateSession[sessionId];
+
+        lumSession.pHCLuminateBridge->updateFloorMaterial(color);
 
         return true;
     }

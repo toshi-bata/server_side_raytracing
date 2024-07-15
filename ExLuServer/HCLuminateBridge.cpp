@@ -493,6 +493,8 @@ namespace HC_luminate_bridge {
 
         conversionDataNode->floorMesh = mesh;
 
+        resetFrame();
+
         return true;
     }
 
@@ -514,6 +516,64 @@ namespace HC_luminate_bridge {
         resetFrame();
 
         return true;
+    }
+
+    bool HCLuminateBridge::updateFloorMaterial(const double* color)
+    {
+        ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
+        if (nullptr == conversionDataNode->floorMesh)
+            return false;
+
+        RED::Object* floorMesh = conversionDataNode->floorMesh;
+
+        RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
+
+        // Meterial
+        RED::Object* material = nullptr;
+        RC_TEST(iresmgr->CreateMaterial(material, iresmgr->GetState()));
+        RED::IMaterial* imaterial = material->As< RED::IMaterial >();
+
+        float fR = color[0];
+        float fG = color[1];
+        float fB = color[2];
+        float fA = color[3];
+
+        RED::Color deffuseColor = RED::Color(fR, fG, fB, 1.f);
+        RED::Color feflectionColor = RED::Color(0.25f, 0.25f, 0.25f, 1.f);
+        RED::Color anisotropyColor = RED::Color(0.25f, 0.25f, 0.25f, 1.f);
+        RED::Color transmissionColor = RED::Color(1.f - fA, 1.f - fA, 1.f - fA, 1.f - fA);
+
+        RC_TEST(imaterial->SetupRealisticMaterial(
+
+            false,                                                         // Double sided
+            true,                                                          // Fresnel
+            deffuseColor, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,   // Diffusion
+            feflectionColor, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0, // Reflection
+            RED::Color::BLACK, FLT_MAX,                                    // Reflection fog
+            false, false, NULL, RED::Matrix::IDENTITY,                     // Environment
+            transmissionColor, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0, // Transmission
+            0.0f, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,              // Transmission glossiness
+            2.3f, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,              // IOR
+            RED::Color::WHITE, 1.0f,                                       // Transmission scattering
+            false, false,                                                  // Caustics
+            anisotropyColor, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0, // Reflection anisotropy
+            0.0f, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,              // Reflection anisotropy orientation
+            NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0, RED::MCL_USER0,    // Bump
+            0.0f, 0.0f, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,        // Displacement
+            NULL, &RED::LayerSet::ALL_LAYERS,                              // Layersets
+            resmgr, iresmgr->GetState()));
+
+        // Apply material if any.
+        if (material != nullptr)
+        {
+            RC_TEST(floorMesh->As<RED::IShape>()->SetMaterial(material, iresmgr->GetState()));
+            resetFrame();
+        
+            return true;
+        }
+
+        return false;
     }
 
     RED_RC
@@ -709,8 +769,16 @@ namespace HC_luminate_bridge {
         if (a_node_name != nullptr) {
             ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
 
-            if (0 < conversionDataNode->segmentTransformShapeMap.count(a_node_name))
-                return conversionDataNode->segmentTransformShapeMap[a_node_name];
+            if (0 == strcmp(a_node_name, "HL_floorPlane"))
+            {
+                if (nullptr != conversionDataNode->floorMesh)
+                    return conversionDataNode->floorMesh;
+            }
+            else
+            {
+                if (0 < conversionDataNode->segmentTransformShapeMap.count(a_node_name))
+                    return conversionDataNode->segmentTransformShapeMap[a_node_name];
+            }
         }
         return nullptr;
     }

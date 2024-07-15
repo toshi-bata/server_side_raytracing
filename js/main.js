@@ -24,6 +24,7 @@ class Main {
         this._currentMaterialId;
         this._currentLightingId;
         this._isAutoSlide;
+        this._floorMeshId;
     }
 
     start (port, viewerMode, modelName, reverseProxy) {
@@ -31,6 +32,7 @@ class Main {
         this._reverseProxy = reverseProxy;
         this._timerId = null;
         this._isBusy = false;
+        this._floorMeshId = null;
         this._requestServerProcess();
         this._createViewer(viewerMode, modelName);
         this._initEvents();
@@ -272,6 +274,30 @@ class Main {
             },
         });
 
+        // Add floor dialog
+        $("#addFloorDlg").dialog({
+            autoOpen: false,
+            height: 350,
+            width: 350,
+            modal: false,
+            title: "Add Floor",
+            closeOnEscape: true,
+            position: {my: "left top", at: "left bottom", of: "#toolbarGr"},
+            buttons: {
+                'Close': () => {
+                    this._createFloorOp.Close();
+                    $("#addFloorDlg").dialog('close');
+                }
+            },
+        });
+        $('#colorR').val(136);
+        $('#colorG').val(144);
+        $('#colorB').val(113);
+        $('#colorA').val(0.2);
+        $('#updateFloor').on('click', (e) => {
+            this._updateFloorMaterial();
+        });
+
         // Progress bar
         $("#progressBar").progressbar({
             value: 0,
@@ -313,13 +339,10 @@ class Main {
                     $('#upVectorDlg').dialog('open');
                 } break;
                 case "CreateFloor": {
-                    if (!isOn) {
+                    if (!$('#addFloorDlg').dialog('isOpen')) {
+                        $('#addFloorDlg').dialog('open');
                         this._viewer.operatorManager.push(this._createFloorOpHandle);
-                        this._createFloorOp.Init();
-                    }
-                    else {
-                        this._deleteFloor();
-                        this._createFloorOp.Term();
+                        this._createFloorOp.Open();
                     }
                 } break;
                 case "Download": {
@@ -734,12 +757,55 @@ class Main {
         oReq.send();
     }
 
-    invokeCreateFloor(params) {
-        this._serverCaller.CallServerPost("AddFloorMesh", params);
+    async invokeCreateFloor(params) {
+        // Create HC mesh
+        if (null != this._floorMeshId) {
+            await this._viewer.model.deleteMeshInstances([this._floorMeshId]);
+        }
+
+        let vertexData = [];
+        let normalData = [];
+        for (let id of params.faceList) {
+            vertexData.push(params.points[id * 3 + 0]);
+            vertexData.push(params.points[id * 3 + 1]);
+            vertexData.push(params.points[id * 3 + 2]);
+            normalData.push(0.0);
+            normalData.push(0.0);
+            normalData.push(1.0);
+        }
+        const meshData = new Communicator.MeshData();
+        meshData.setFaceWinding(Communicator.FaceWinding.CounterClockwise);
+        meshData.addFaces(vertexData, normalData);
+        const meshId = await this._viewer.model.createMesh(meshData);
+
+        const r = $('#colorR').val();
+        const g = $('#colorG').val();
+        const b = $('#colorB').val();
+        const faceColor = new Communicator.Color(r, g, b);
+        const meshInstanceData = new Communicator.MeshInstanceData(meshId, undefined, "HL_floorPlane", faceColor);
+        const instacdId = await this._viewer.model.createMeshInstance(meshInstanceData);
+
+        this._floorMeshId = instacdId;
+
+        await this._serverCaller.CallServerPost("AddFloorMesh", params);
+        this._updateFloorMaterial();
     }
 
     _deleteFloor() {
         this._serverCaller.CallServerPost("DeleteFloorMesh", {});
         this._setDefaultOperators();
+    }
+
+    _updateFloorMaterial() {
+        const color = [
+            $('#colorR').val() / 255,
+            $('#colorG').val() / 255,
+            $('#colorB').val() / 255,
+            $('#colorA').val()
+        ]
+        const params = {
+            color: color
+        };
+        this._serverCaller.CallServerPost("UpdateFloorMaterial", params);
     }
 }

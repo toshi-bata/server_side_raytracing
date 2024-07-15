@@ -807,22 +807,35 @@ answer_to_connection(void* cls,
 
             double* points;
             if (!paramStrToDblArr("points", points)) return MHD_NO;
-
+            
             int* faceList;
             if (!paramStrToIntArr("faceList", faceList)) return MHD_NO;
 
             m_pHLuminateServer->DeleteFloorMesh(con_info->sessionId);
 
-            m_pHLuminateServer->AddFloorMesh(con_info->sessionId, pointCnt, points, faceCnt, faceList);
+            if (m_pHLuminateServer->AddFloorMesh(con_info->sessionId, pointCnt, points, faceCnt, faceList))
+                con_info->answerstring = response_success;
+            else
+                con_info->answerstring = response_error;
+
+            con_info->answercode = MHD_HTTP_OK;
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/DeleteFloorMesh"))
+        {
+            m_pHLuminateServer->DeleteFloorMesh(con_info->sessionId);
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
-        else if (0 == strcmp(url, "/DeleteFloorMesh"))
+        else if (0 == strcmp(url, "/UpdateFloorMaterial"))
         {
-            m_pHLuminateServer->DeleteFloorMesh(con_info->sessionId);
+            double* color;
+            if (!paramStrToDblArr("color", color)) return MHD_NO;
+
+            m_pHLuminateServer->UpdateFloorMaterial(con_info->sessionId, color);
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;

@@ -25,11 +25,12 @@ class SetMaterialOperator {
                     this._viewer.model.resetNodesOpacity([root]);
                     
                     this._viewer.model.setNodesHighlighted([nodeId], true);
-                    const parentId = this._viewer.model.getNodeParent(nodeId);
-                    const name = this._viewer.model.getNodeName(parentId);
 
-                    console.log(name);
-
+                    let name = this._viewer.model.getNodeName(nodeId);
+                    if ("HL_floorPlane" != name) {
+                        const parentId = this._viewer.model.getNodeParent(nodeId);
+                        name = this._viewer.model.getNodeName(parentId);
+                    }
                     this._owner.setMaterial(name);
 
                     event.setHandled(true);

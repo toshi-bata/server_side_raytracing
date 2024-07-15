@@ -222,6 +222,7 @@ namespace HC_luminate_bridge {
 
 		bool addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList);
 		bool deleteFloorMesh();
+		bool updateFloorMaterial(const double* color);
 
 	private:
 		/**
