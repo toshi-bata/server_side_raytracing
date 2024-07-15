@@ -60,9 +60,10 @@ class CreateFloorOperator {
             this._createFloor();
 
             this._anchorPlane = Communicator.Plane.createFromPointAndNormal(box.min, new Communicator.Point3(0, 0, 1));
+
+            this._markup = new FloorMarkup(this._viewer, this._vertices);
         }
 
-        this._markup = new FloorMarkup(this._viewer, this._vertices);
         this._markupHandle = this._viewer.markupManager.registerMarkup(this._markup);
     }
 
@@ -169,7 +170,7 @@ class FloorMarkup extends Communicator.Markup.MarkupItem {
                 const enPnt3d = this._viewer.view.projectPoint(this._vertices[i]);
                 const stPnt2d = Communicator.Point2.fromPoint3(stPnt3d);
                 const enPnt2d = Communicator.Point2.fromPoint3(enPnt3d);
-                const mid2d = stPnt2d.add(enPnt2d.subtract(stPnt2d).scale(0.5));
+                const mid2d = stPnt2d.copy().add(enPnt2d.copy().subtract(stPnt2d).scale(0.5));
                 this._middleCirArr[i].setCenter(mid2d);
 
                 this._lines.addLine(prev_pnt2d, pnt2d)
@@ -196,14 +197,24 @@ class FloorMarkup extends Communicator.Markup.MarkupItem {
                 return true;
             }
 
-            // Middle circle hit
-            let prevId = i - 1;
-            if (0 == i) {
-                prevId = this._vertices.length - 1;
+            // Middle circle hit detection
+            let mid2d = new Communicator.Point2(0, 0);
+            let midId = i + 10;
+            const vertex = this._midVertices[String(midId)];
+            if (undefined == vertex) {
+                let prevId = i - 1;
+                if (0 == i) {
+                    prevId = this._vertices.length - 1;
+                }
+                const stPnt2d = this._cornerCirArr[prevId].getCenter();
+                const enPnt2d = this._cornerCirArr[i].getCenter();
+                mid2d = stPnt2d.copy().add(enPnt2d.copy().subtract(stPnt2d).scale(0.5));
             }
-            const stPnt2d = this._cornerCirArr[prevId].getCenter();
-            const enPnt2d = this._cornerCirArr[i].getCenter();
-            const mid2d = stPnt2d.add(enPnt2d.subtract(stPnt2d).scale(0.5));
+            else{
+                const mid3d = this._viewer.view.projectPoint(vertex);
+                mid2d = Communicator.Point2.fromPoint3(mid3d);
+            }
+
             const midDist = Communicator.Point2.distance(mid2d, point);
             if ((this._rad + 1) * 2 >= midDist){
                 this._selectedId = i + 10;
@@ -230,6 +241,25 @@ class FloorMarkup extends Communicator.Markup.MarkupItem {
         else {
             this._midVertices[id] = vertex;
         }
+
+        // Remove concave mid points
+        for (let i = 0; i < this._vertices.length; i++) {
+            let midId = i + 10;
+            const midVertex = this._midVertices[String(midId)];
+            if (undefined != midVertex) {
+                let prevId = i - 1;
+                if (0 == i) {
+                    prevId = this._vertices.length - 1;
+                }
+                const vect1 = this._vertices[i].copy().subtract(this._vertices[prevId]).normalize();
+                const vect2 = midVertex.copy().subtract(this._vertices[prevId]).normalize();
+                const angleAxisc = vectorsAngleDeg(vect1, vect2);
+                if (0 < angleAxisc.axis.z) {
+                    this._midVertices[String(midId)] = undefined;
+                }
+            }
+        }
+
         this._viewer.markupManager.refreshMarkup();
     }
 }

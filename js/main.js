@@ -25,6 +25,7 @@ class Main {
         this._currentLightingId;
         this._isAutoSlide;
         this._floorMeshId;
+        this._floorColor = [];
     }
 
     start (port, viewerMode, modelName, reverseProxy) {
@@ -33,6 +34,7 @@ class Main {
         this._timerId = null;
         this._isBusy = false;
         this._floorMeshId = null;
+        this._floorColor = [255, 255, 255];
         this._requestServerProcess();
         this._createViewer(viewerMode, modelName);
         this._initEvents();
@@ -290,10 +292,15 @@ class Main {
                 }
             },
         });
-        $('#colorR').val(136);
-        $('#colorG').val(144);
-        $('#colorB').val(113);
-        $('#colorA').val(0.2);
+        // Create color picker
+        $('.simple_color').simpleColor({
+            cellWidth: 9,
+            cellHeight: 9,
+            onSelect: (hex, element) => {
+                this._floorColor = hex2rgb(hex);
+            }
+        });
+        $('#colorA').val(1.0);
         $('#updateFloor').on('click', (e) => {
             this._updateFloorMaterial();
         });
@@ -778,14 +785,14 @@ class Main {
         meshData.addFaces(vertexData, normalData);
         const meshId = await this._viewer.model.createMesh(meshData);
 
-        const r = $('#colorR').val();
-        const g = $('#colorG').val();
-        const b = $('#colorB').val();
+        const r = this._floorColor[0];
+        const g = this._floorColor[1];
+        const b = this._floorColor[2];
         const faceColor = new Communicator.Color(r, g, b);
         const meshInstanceData = new Communicator.MeshInstanceData(meshId, undefined, "HL_floorPlane", faceColor);
-        const instacdId = await this._viewer.model.createMeshInstance(meshInstanceData);
-
-        this._floorMeshId = instacdId;
+        this._floorMeshId = await this._viewer.model.createMeshInstance(meshInstanceData);
+        const opacity = 1 - $('#colorA').val();
+        this._viewer.model.setNodesOpacity([this._floorMeshId], opacity);
 
         await this._serverCaller.CallServerPost("AddFloorMesh", params);
         this._updateFloorMaterial();
@@ -797,10 +804,19 @@ class Main {
     }
 
     _updateFloorMaterial() {
+        const r = this._floorColor[0];
+        const g = this._floorColor[1];
+        const b = this._floorColor[2];
+        const faceColor = new Communicator.Color(r, g, b);
+        this._viewer.model.setNodesFaceColor([this._floorMeshId], faceColor).then(() => {
+            const opacity = 1 - $('#colorA').val();
+            this._viewer.model.setNodesOpacity([this._floorMeshId], opacity);
+        });
+
         const color = [
-            $('#colorR').val() / 255,
-            $('#colorG').val() / 255,
-            $('#colorB').val() / 255,
+            this._floorColor[0] / 255,
+            this._floorColor[1] / 255,
+            this._floorColor[2] / 255,
             $('#colorA').val()
         ]
         const params = {
