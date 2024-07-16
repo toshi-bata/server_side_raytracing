@@ -8,14 +8,20 @@ class CreateFloorOperator {
         this._activeID;
         this._anchorPlane;
         this._midVertices = {};
+        this._uvBox = {
+            min: new Communicator.Point2,
+            max: new Communicator.Point2
+        }
     }
 
     _createFloor() {
         let points = [];
+        let uvs = [];
         for (let vertex of this._vertices) {
             points.push(vertex.x);
             points.push(vertex.y);
             points.push(vertex.z);
+            uvs = uvs.concat(this._getUV(vertex));
         }
 
         const faceList = [0, 1, 2, 0, 2, 3];
@@ -27,16 +33,20 @@ class CreateFloorOperator {
             if (0 == id) {
                 prevId = 3;
             }
-            points.push(this._midVertices[key].x);
-            points.push(this._midVertices[key].y);
-            points.push(this._midVertices[key].z);
+            const vertex = this._midVertices[key];
+            if (undefined != vertex) {
+                points.push(vertex.x);
+                points.push(vertex.y);
+                points.push(vertex.z);
+                uvs = uvs.concat(this._getUV(vertex));
 
-            faceList.push(prevId);
-            faceList.push(points.length / 3 - 1);
-            faceList.push(id);
+                faceList.push(prevId);
+                faceList.push(points.length / 3 - 1);
+                faceList.push(id);
 
-            faceCnt++;
-            id++;
+                faceCnt++;
+                id++;
+            }
         }
 
         const params = {
@@ -44,8 +54,20 @@ class CreateFloorOperator {
             points: points,
             faceCnt: faceCnt,
             faceList: faceList,
+            uvs: uvs
         }
         this._owner.invokeCreateFloor(params);
+    }
+
+    _getUV(vertex) {
+        const width = this._uvBox.max.x - this._uvBox.min.x;
+        const height = this._uvBox.max.y - this._uvBox.min.y;
+        let unit = width;
+        if (width < height) unit = height;
+        unit *= scale;
+        const u = (vertex.x - this._uvBox.min.x) / unit;
+        const v = (vertex.y - this._uvBox.min.y) / unit;
+        return [u, v];
     }
 
     async Open() {
@@ -56,6 +78,9 @@ class CreateFloorOperator {
             this._vertices.push(new Communicator.Point3(box.max.x, box.min.y, box.min.z));
             this._vertices.push(new Communicator.Point3(box.max.x, box.max.y, box.min.z));
             this._vertices.push(new Communicator.Point3(box.min.x, box.max.y, box.min.z));
+
+            this._uvBox.min = this._vertices[0];
+            this._uvBox.max = this._vertices[2];
 
             this._createFloor();
 
@@ -100,6 +125,7 @@ class CreateFloorOperator {
                 }
                 this._markup.SetVertex(this._activeID, vertex);
             }
+            this._updateUVBox();
             event.setHandled(true);
         }
     }
@@ -110,6 +136,29 @@ class CreateFloorOperator {
             event.setHandled(true);
         }
         this._activeID = -1;
+    }
+
+    _updateUVBox() {
+        // Update uv box
+        this._uvBox.min = new Communicator.Point2(1.0E8, 1.0E8);
+        this._uvBox.max = new Communicator.Point2(-1.0E8, -1.0E8);
+        
+        for (let vertex of this._vertices) {
+            if (this._uvBox.min.x > vertex.x) this._uvBox.min.x = vertex.x;
+            if (this._uvBox.min.y > vertex.y) this._uvBox.min.y = vertex.y;
+            if (this._uvBox.max.x < vertex.x) this._uvBox.max.x = vertex.x;
+            if (this._uvBox.max.y < vertex.y) this._uvBox.max.y = vertex.y;
+        }
+
+        for (let key in this._midVertices) {
+            const vertex = this._midVertices[key];
+            if (undefined != vertex) {
+                if (this._uvBox.min.x > vertex.x) this._uvBox.min.x = vertex.x;
+                if (this._uvBox.min.y > vertex.y) this._uvBox.min.y = vertex.y;
+                if (this._uvBox.max.x < vertex.x) this._uvBox.max.x = vertex.x;
+                if (this._uvBox.max.y < vertex.y) this._uvBox.max.y = vertex.y;
+            }
+        }
     }
 }
 
@@ -259,7 +308,6 @@ class FloorMarkup extends Communicator.Markup.MarkupItem {
                 }
             }
         }
-
         this._viewer.markupManager.refreshMarkup();
     }
 }

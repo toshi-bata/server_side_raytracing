@@ -458,7 +458,7 @@ namespace HC_luminate_bridge {
         return rc;
     }
 
-    bool HCLuminateBridge::addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList)
+    bool HCLuminateBridge::addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs)
     {
         ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
         if (nullptr == conversionDataNode->rootTransformShape)
@@ -474,6 +474,7 @@ namespace HC_luminate_bridge {
 
         std::vector<float> fPoints(points, points + pointCnt);
         RC_TEST(imesh->SetArray(RED::MCL_VERTEX, fPoints.data(), pointCnt / 3, 3, RED::MFT_FLOAT, iresmgr->GetState()));
+        std::vector<float>().swap(fPoints);
 
         RC_TEST(imesh->AddTriangles(faceList, faceCnt, iresmgr->GetState()));
 
@@ -487,8 +488,11 @@ namespace HC_luminate_bridge {
         RC_TEST(imesh->SetArray(RED::MCL_NORMAL, normals.data(), pointCnt / 3, 3, RED::MFT_FLOAT, iresmgr->GetState()));
         std::vector<double>().swap(normals);
 
-        RC_TEST(imesh->BuildTextureCoordinates(RED::MESH_CHANNEL::MCL_TEX0, RED::MTCM_BOX, RED::Matrix::IDENTITY, iresmgr->GetState()));
-        
+        //RC_TEST(imesh->BuildTextureCoordinates(RED::MESH_CHANNEL::MCL_TEX0, RED::MTCM_BOX, RED::Matrix::IDENTITY, iresmgr->GetState()));
+        std::vector<float> fUVs(uvs, uvs + pointCnt / 3 * 2);
+        RC_TEST(imesh->SetArray(RED::MESH_CHANNEL::MCL_TEX0, fUVs.data(), pointCnt / 3, 2, RED::MFT_FLOAT, iresmgr->GetState()));
+        std::vector<float>().swap(fUVs);
+
         RC_TEST(itransform->AddChild(mesh, RED_SHP_DAG_NO_UPDATE, iresmgr->GetState()));
 
         conversionDataNode->floorMesh = mesh;

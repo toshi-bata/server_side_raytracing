@@ -46,7 +46,7 @@ public:
 	bool SetLighting(std::string sessionId, int lightingId);
 	bool SetModelTransform(std::string sessionId, double* matrix);
 	bool DownloadImage(std::string sessionId);
-	bool AddFloorMesh(const std::string sessionId, const int pointCnt, const double* points, const int faceCnt, const int* faceList);
+	bool AddFloorMesh(const std::string sessionId, const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs);
 	bool DeleteFloorMesh(const std::string sessionId);
 	bool UpdateFloorMaterial(const std::string sessionId, const double* color);
 };

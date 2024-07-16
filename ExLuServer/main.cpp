@@ -811,9 +811,12 @@ answer_to_connection(void* cls,
             int* faceList;
             if (!paramStrToIntArr("faceList", faceList)) return MHD_NO;
 
+            double* uvs;
+            if (!paramStrToDblArr("uvs", uvs)) return MHD_NO;
+
             m_pHLuminateServer->DeleteFloorMesh(con_info->sessionId);
 
-            if (m_pHLuminateServer->AddFloorMesh(con_info->sessionId, pointCnt, points, faceCnt, faceList))
+            if (m_pHLuminateServer->AddFloorMesh(con_info->sessionId, pointCnt, points, faceCnt, faceList, uvs))
                 con_info->answerstring = response_success;
             else
                 con_info->answerstring = response_error;

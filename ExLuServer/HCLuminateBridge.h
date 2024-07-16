@@ -220,7 +220,7 @@ namespace HC_luminate_bridge {
 
 		RED_RC syncModelTransform(double* matrix);
 
-		bool addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList);
+		bool addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs);
 		bool deleteFloorMesh();
 		bool updateFloorMaterial(const double* color);
 

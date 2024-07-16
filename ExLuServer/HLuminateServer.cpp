@@ -441,13 +441,13 @@ bool HLuminateServer::DownloadImage(std::string sessionId)
     return false;
 }
 
-bool HLuminateServer::AddFloorMesh(const std::string sessionId, const int pointCnt, const double* points, const int faceCnt, const int* faceList)
+bool HLuminateServer::AddFloorMesh(const std::string sessionId, const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs)
 {
     if (m_mHLuminateSession.count(sessionId))
     {
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
 
-        if (lumSession.pHCLuminateBridge->addFloorMesh(pointCnt, points, faceCnt, faceList))
+        if (lumSession.pHCLuminateBridge->addFloorMesh(pointCnt, points, faceCnt, faceList, uvs))
         {
             RED::Object* mesh = lumSession.pHCLuminateBridge->getFloorMesh();
             if (nullptr == mesh)
