@@ -64,7 +64,6 @@ class CreateFloorOperator {
         const height = this._uvBox.max.y - this._uvBox.min.y;
         let unit = width;
         if (width < height) unit = height;
-        unit *= scale;
         const u = (vertex.x - this._uvBox.min.x) / unit;
         const v = (vertex.y - this._uvBox.min.y) / unit;
         return [u, v];
