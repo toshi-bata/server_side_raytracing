@@ -289,7 +289,7 @@ class Main {
         // Add floor dialog
         $("#addFloorDlg").dialog({
             autoOpen: false,
-            height: 450,
+            height: 460,
             width: 450,
             modal: false,
             title: "Add Floor",
@@ -371,6 +371,9 @@ class Main {
                         this._createFloorOp.Open();
                     }
                 } break;
+                case "DeleteFloor": {
+                    this._deleteFloor();
+                } break;
                 case "Download": {
                     const serverName = this._sessionId + ".png";
                     const downloadName = "image.png";
@@ -399,12 +402,7 @@ class Main {
         });
 
         // Toolbar default
-        $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
-        $('[data-command="SetMaterial"]').prop("disabled", true).css("background-color", "darkgrey");
-        $('[data-command="SetLighting"]').prop("disabled", true).css("background-color", "darkgrey");
-        $('[data-command="UpVector"]').prop("disabled", true).css("background-color", "darkgrey");
-        $('[data-command="CreateFloor"]').prop("disabled", true).css("background-color", "darkgrey");
-        $('[data-command="Download"]').prop("disabled", true).css("background-color", "darkgrey");
+        $('.while_rendering').prop("disabled", true).css("background-color", "darkgrey");
 
         // Slider
         $("#opacitySlider").slider({
@@ -606,11 +604,7 @@ class Main {
 
             this._serverCaller.CallServerPost(command, params).then(() => {
                 // Enabling commands
-                $('[data-command="SetMaterial"]').prop("disabled", false).css("background-color", "gainsboro");
-                $('[data-command="SetLighting"]').prop("disabled", false).css("background-color", "gainsboro");
-                $('[data-command="UpVector"]').prop("disabled", false).css("background-color", "gainsboro");
-                $('[data-command="CreateFloor"]').prop("disabled", false).css("background-color", "gainsboro");
-                $('[data-command="Download"]').prop("disabled", false).css("background-color", "gainsboro");
+                $('.while_rendering').prop("disabled", false).css("background-color", "gainsboro");
 
                 $("#loadingImage").hide();
                 this._invokeDraw();
@@ -767,8 +761,14 @@ class Main {
         this._updateFloorMaterial();
     }
 
-    _deleteFloor() {
-        this._serverCaller.CallServerPost("DeleteFloorMesh", {});
+    async _deleteFloor() {
+        this._createFloorOp.Delete();
+        $('#addFloorDlg').dialog('close');
+
+        await this._viewer.model.deleteNode( this._floorMeshId);
+        this._floorMeshId = null;
+
+        await this._serverCaller.CallServerPost("DeleteFloorMesh", {});
         this._setDefaultOperators();
     }
 

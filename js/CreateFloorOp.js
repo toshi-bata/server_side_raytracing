@@ -98,6 +98,12 @@ class CreateFloorOperator {
         }
     }
 
+    Delete() {
+        this.Close();
+        this._vertices.length = 0;
+        this._midVertices = {};
+    }
+
     onMouseDown(event) {
         if (Communicator.Button.Left != event.getButton()) return;
 

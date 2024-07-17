@@ -524,6 +524,8 @@ namespace HC_luminate_bridge {
 
         conversionDataNode->floorMesh = nullptr;
 
+        std::vector<float>().swap(m_floorUVArr);
+
         resetFrame();
 
         return true;

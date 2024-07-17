@@ -604,7 +604,7 @@ answer_to_connection(void* cls,
                     con_info->answerstring = response_success;
                     con_info->answercode = MHD_HTTP_OK;
                 }
-                else if (0 == strcmp(lowExt, "jpg") || 0 == strcmp(lowExt, "png"))
+                else if (0 == strcmp(lowExt, "jpg") || 0 == strcmp(lowExt, "jpeg") || 0 == strcmp(lowExt, "png"))
                 {
 #ifndef _WIN32
                     sprintf(s_floorTexturePath, "../texture-%s.%s", con_info->sessionId, lowExt);
@@ -867,6 +867,8 @@ answer_to_connection(void* cls,
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
+            
+            sprintf(s_floorTexturePath, "");
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
