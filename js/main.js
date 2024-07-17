@@ -263,7 +263,7 @@ class Main {
         // Up Vector dialog
         $("#upVectorDlg").dialog({
             autoOpen: false,
-            height: 200,
+            height: 250,
             width: 350,
             modal: false,
             title: "Up Vector",
@@ -274,6 +274,16 @@ class Main {
                     $("#upVectorDlg").dialog('close');
                 }
             },
+        });
+        $("#upVector").val("Z");
+        $("#rotationAng").val(0);
+
+        $('#upVector').change((e) => {
+            this._changeUpVector();
+        });
+
+        $("#rotationAng").change((e) => {
+            this._changeUpVector();
         });
 
         // Add floor dialog
@@ -411,56 +421,6 @@ class Main {
             },
             change: (e, ui) => {
             },
-        });
-
-        // Up vector
-        $("#upVector").val("Z");
-        $('#upVector').change((e) => {
-            const upVect = $(e.currentTarget).val();
-            const root = this._viewer.model.getAbsoluteRootNode();
-
-            // reset modelling matrix
-            this._viewer.model.resetNodeMatrixToInitial(root);
-
-            let roMatrix = new Communicator.Matrix();
-            switch (upVect) {
-            case "X": roMatrix = Communicator.Matrix.yAxisRotation(90); break;
-            case "Y": roMatrix = Communicator.Matrix.xAxisRotation(-90); break;
-            case "Z": break;
-            case "-X": roMatrix = Communicator.Matrix.yAxisRotation(-90); break;
-            case "-Y": roMatrix = Communicator.Matrix.xAxisRotation(90); break;
-            case "-Z": roMatrix = Communicator.Matrix.xAxisRotation(180);break;
-            }
-
-            // Compute rotation center
-            this._viewer.model.getModelBounding(true, false).then((box) => {
-                const center = box.min.copy().add(box.max.copy().subtract(box.min).scale(0.5));
-
-                // Compute center point after rotation
-                const roPoint = Communicator.Point3.zero();
-                roMatrix.transform(center, roPoint);
-
-                // Create translation matrix to shift the node arond rotation center after rotation
-                const trMatrix = new Communicator.Matrix();
-                trMatrix.setTranslationComponent(center.x - roPoint.x, center.y - roPoint.y, center.z - roPoint.z);
-
-                // Compute the node matrix of after rotation (multiplyMatrix * translationMatrix)
-                const matrix = Communicator.Matrix.multiply(roMatrix, trMatrix);
-                
-                // set root matrix
-                this._viewer.model.setNodeMatrix(root, matrix);
-
-                let matArr = [];
-                for (let i = 0; i < 16; i++) {
-                    matArr.push(matrix.m[i]);
-                }
-                const params = {
-                    matrix: matArr
-                }
-
-                this._serverCaller.CallServerPost("SetRootTransform", params).then(() => {
-                });
-            });
         });
     }
 
@@ -837,5 +797,71 @@ class Main {
             textureScale: textureScale
         };
         this._serverCaller.CallServerPost("UpdateFloorMaterial", params);
+    }
+
+    async _changeUpVector() {
+        const upVect = $('#upVector').val();
+        const rotAng = $('#rotationAng').val();
+        
+        const root = this._viewer.model.getAbsoluteRootNode();
+        const nodes = this._viewer.model.getNodeChildren(root);
+
+        // Reset visibility
+        this._clearRaytracing();
+        $('#backgroundImg').attr('src', 'css/images/default_background.png');
+        await this._viewer.model.resetNodesOpacity([root]);
+
+        // reset modelling matrix
+        for (let node of nodes) {
+            if (node != this._floorMeshId)
+                await this._viewer.model.resetNodeMatrixToInitial(node);
+        }
+
+        let roMatrix = new Communicator.Matrix();
+        switch (upVect) {
+        case "X": roMatrix = Communicator.Matrix.yAxisRotation(90); break;
+        case "Y": roMatrix = Communicator.Matrix.xAxisRotation(-90); break;
+        case "Z": this._invokeDraw(); break;
+        case "-X": roMatrix = Communicator.Matrix.yAxisRotation(-90); break;
+        case "-Y": roMatrix = Communicator.Matrix.xAxisRotation(90); break;
+        case "-Z": roMatrix = Communicator.Matrix.xAxisRotation(180);break;
+        }
+
+        const zRoMatrix = Communicator.Matrix.zAxisRotation(-rotAng);
+        roMatrix = Communicator.Matrix.multiply(roMatrix, zRoMatrix);
+
+        // Compute rotation center
+        const box = await this._viewer.model.getModelBounding(true, false);
+
+        const center = box.min.copy().add(box.max.copy().subtract(box.min).scale(0.5));
+
+        // Compute center point after rotation
+        const roPoint = Communicator.Point3.zero();
+        roMatrix.transform(center, roPoint);
+
+        // Create translation matrix to shift the node arond rotation center after rotation
+        const trMatrix = new Communicator.Matrix();
+        trMatrix.setTranslationComponent(center.x - roPoint.x, center.y - roPoint.y, center.z - roPoint.z);
+
+        // Compute the node matrix of after rotation (multiplyMatrix * translationMatrix)
+        const matrix = Communicator.Matrix.multiply(roMatrix, trMatrix);
+        
+        // set matrix
+        for (let node of nodes) {
+            if (node != this._floorMeshId)
+                await this._viewer.model.setNodeMatrix(node, matrix);
+        }
+
+        let matArr = [];
+        for (let i = 0; i < 16; i++) {
+            matArr.push(matrix.m[i]);
+        }
+        const params = {
+            matrix: matArr
+        }
+
+        await this._serverCaller.CallServerPost("SetRootTransform", params);
+
+        this._invokeDraw();
     }
 }
