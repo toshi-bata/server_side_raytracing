@@ -26,6 +26,7 @@ class Main {
         this._isAutoSlide;
         this._floorMeshId;
         this._floorColor = [];
+        this._rotationCenter;
     }
 
     start (port, viewerMode, modelName, reverseProxy) {
@@ -811,17 +812,11 @@ class Main {
         $('#backgroundImg').attr('src', 'css/images/default_background.png');
         await this._viewer.model.resetNodesOpacity([root]);
 
-        // reset modelling matrix
-        for (let node of nodes) {
-            if (node != this._floorMeshId)
-                await this._viewer.model.resetNodeMatrixToInitial(node);
-        }
-
         let roMatrix = new Communicator.Matrix();
         switch (upVect) {
         case "X": roMatrix = Communicator.Matrix.yAxisRotation(90); break;
         case "Y": roMatrix = Communicator.Matrix.xAxisRotation(-90); break;
-        case "Z": this._invokeDraw(); break;
+        case "Z": break;
         case "-X": roMatrix = Communicator.Matrix.yAxisRotation(-90); break;
         case "-Y": roMatrix = Communicator.Matrix.xAxisRotation(90); break;
         case "-Z": roMatrix = Communicator.Matrix.xAxisRotation(180);break;
@@ -831,17 +826,18 @@ class Main {
         roMatrix = Communicator.Matrix.multiply(roMatrix, zRoMatrix);
 
         // Compute rotation center
-        const box = await this._viewer.model.getModelBounding(true, false);
-
-        const center = box.min.copy().add(box.max.copy().subtract(box.min).scale(0.5));
+        if (undefined == this._rotationCenter) {
+            const box = await this._viewer.model.getModelBounding(true, false);
+            this._rotationCenter = box.min.copy().add(box.max.copy().subtract(box.min).scale(0.5));
+        }
 
         // Compute center point after rotation
         const roPoint = Communicator.Point3.zero();
-        roMatrix.transform(center, roPoint);
+        roMatrix.transform(this._rotationCenter, roPoint);
 
         // Create translation matrix to shift the node arond rotation center after rotation
         const trMatrix = new Communicator.Matrix();
-        trMatrix.setTranslationComponent(center.x - roPoint.x, center.y - roPoint.y, center.z - roPoint.z);
+        trMatrix.setTranslationComponent(this._rotationCenter.x - roPoint.x, this._rotationCenter.y - roPoint.y, this._rotationCenter.z - roPoint.z);
 
         // Compute the node matrix of after rotation (multiplyMatrix * translationMatrix)
         const matrix = Communicator.Matrix.multiply(roMatrix, trMatrix);
