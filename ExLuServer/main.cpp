@@ -42,6 +42,7 @@ static char s_pcWorkingDir[256];
 static char s_pcScModelsDir[256];
 static char s_pcModelName[256];
 static std::map<std::string, std::string> s_mParams;
+static char s_floorTexturePath[FILENAME_MAX];
 
 enum ConnectionType
 {
@@ -530,6 +531,21 @@ answer_to_connection(void* cls,
             }
 #endif
 
+            // Delete texture file
+            if (0 < strlen(s_floorTexturePath))
+            {
+#ifndef _WIN32
+                delete_files(s_floorTexturePath);
+#else
+                {
+                    wchar_t wFilePath[_MAX_FNAME];
+                    mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, s_floorTexturePath, _MAX_FNAME);
+                    _wremove(wFilePath);
+                }
+#endif
+            }
+            sprintf(s_floorTexturePath, "");
+
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
@@ -585,6 +601,27 @@ answer_to_connection(void* cls,
                     else
                         floatArr.push_back(0);
 
+                    con_info->answerstring = response_success;
+                    con_info->answercode = MHD_HTTP_OK;
+                }
+                else if (0 == strcmp(lowExt, "jpg") || 0 == strcmp(lowExt, "png"))
+                {
+#ifndef _WIN32
+                    sprintf(s_floorTexturePath, "../texture-%s.%s", con_info->sessionId, lowExt);
+#else
+                    sprintf(s_floorTexturePath, "..\\texture-%s.%s", con_info->sessionId, lowExt);
+#endif
+
+#ifndef _WIN32
+#else
+                    wchar_t wsFilePathFrom[_MAX_FNAME], wsFilePathTo[_MAX_FNAME];
+                    size_t iRet;
+                    mbstowcs_s(&iRet, wsFilePathFrom, _MAX_FNAME, filePath, _MAX_FNAME);
+                    mbstowcs_s(&iRet, wsFilePathTo, _MAX_FNAME, s_floorTexturePath, _MAX_FNAME);
+
+                    CopyFile(wsFilePathFrom, wsFilePathTo, FALSE);
+#endif
+                    floatArr.push_back(1);
                     con_info->answerstring = response_success;
                     con_info->answercode = MHD_HTTP_OK;
                 }
@@ -838,11 +875,22 @@ answer_to_connection(void* cls,
             double* color;
             if (!paramStrToDblArr("color", color)) return MHD_NO;
 
-            m_pHLuminateServer->UpdateFloorMaterial(con_info->sessionId, color);
+            double textureScale;
+            if (!paramStrToDbl("textureScale", textureScale)) return MHD_NO;
+
+            m_pHLuminateServer->UpdateFloorMaterial(con_info->sessionId, color, s_floorTexturePath, textureScale);
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
 
+            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/ClearFloorTexture"))
+        {
+            sprintf(s_floorTexturePath, "");
+
+            con_info->answerstring = response_success;
+            con_info->answercode = MHD_HTTP_OK;
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
     }

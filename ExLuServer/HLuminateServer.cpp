@@ -474,13 +474,13 @@ bool HLuminateServer::DeleteFloorMesh(const std::string sessionId)
     return false;
 }
 
-bool HLuminateServer::UpdateFloorMaterial(const std::string sessionId, const double* color)
+bool HLuminateServer::UpdateFloorMaterial(const std::string sessionId, const double* color, const char* texturePath, const double uvScale)
 {
     if (m_mHLuminateSession.count(sessionId))
     {
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
 
-        lumSession.pHCLuminateBridge->updateFloorMaterial(color);
+        lumSession.pHCLuminateBridge->updateFloorMaterial(color, texturePath, uvScale);
 
         return true;
     }

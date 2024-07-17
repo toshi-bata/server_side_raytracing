@@ -36,7 +36,7 @@ public:
 		int width, int height, std::vector<MeshPropaties> aMeshProps);
 	std::vector<float> Draw(std::string sessionId, char* filePath);
 	bool ClearSession(std::string sessionId);
-	bool LoadEnvMapFile(std::string a_sessionId, const char* filePath, const char* thumbnailPath);
+	bool LoadEnvMapFile(std::string sessionId, const char* filePath, const char* thumbnailPath);
 	bool SyncCamera(std::string sessionId,
 		double* target, double* up, double* position, int projection, double cameraW, double cameraH);
 	bool Resize(std::string sessionId,
@@ -48,6 +48,7 @@ public:
 	bool DownloadImage(std::string sessionId);
 	bool AddFloorMesh(const std::string sessionId, const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs);
 	bool DeleteFloorMesh(const std::string sessionId);
-	bool UpdateFloorMaterial(const std::string sessionId, const double* color);
+	bool UpdateFloorMaterial(const std::string sessionId, const double* color, const char* texturePath, const double uvScale = 0.0);
+
 };
 

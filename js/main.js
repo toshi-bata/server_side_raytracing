@@ -279,8 +279,8 @@ class Main {
         // Add floor dialog
         $("#addFloorDlg").dialog({
             autoOpen: false,
-            height: 350,
-            width: 350,
+            height: 450,
+            width: 450,
             modal: false,
             title: "Add Floor",
             closeOnEscape: true,
@@ -301,8 +301,17 @@ class Main {
             }
         });
         $('#colorA').val(1.0);
-        $('#updateFloor').on('click', (e) => {
-            this._updateFloorMaterial();
+        $('#textureScale').val(1.0);
+        $("#addFloorDlg").submit((e) => {
+            // Cancel default behavior (abort form action)
+            e.preventDefault();
+
+            let formData = null;
+            if (0 != e.target[2].files.length) {
+                formData = new FormData(e.target);
+            }
+
+            this._updateFloorMaterial(formData);
         });
 
         // Progress bar
@@ -803,15 +812,19 @@ class Main {
         this._setDefaultOperators();
     }
 
-    _updateFloorMaterial() {
+    async _updateFloorMaterial(formData) {
+        if (null != formData) {
+            const arr = await this._serverCaller.CallServerSubmitFile(formData);
+        }
+
         const r = this._floorColor[0];
         const g = this._floorColor[1];
         const b = this._floorColor[2];
         const faceColor = new Communicator.Color(r, g, b);
-        this._viewer.model.setNodesFaceColor([this._floorMeshId], faceColor).then(() => {
-            const opacity = 1 - $('#colorA').val();
-            this._viewer.model.setNodesOpacity([this._floorMeshId], opacity);
-        });
+        await this._viewer.model.setNodesFaceColor([this._floorMeshId], faceColor);
+        const opacity = 1 - $('#colorA').val();
+        this._viewer.model.setNodesOpacity([this._floorMeshId], opacity);
+        const textureScale = $('#textureScale').val();
 
         const color = [
             this._floorColor[0] / 255,
@@ -820,7 +833,8 @@ class Main {
             $('#colorA').val()
         ]
         const params = {
-            color: color
+            color: color,
+            textureScale: textureScale
         };
         this._serverCaller.CallServerPost("UpdateFloorMaterial", params);
     }

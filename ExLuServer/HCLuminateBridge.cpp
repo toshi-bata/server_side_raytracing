@@ -488,10 +488,17 @@ namespace HC_luminate_bridge {
         RC_TEST(imesh->SetArray(RED::MCL_NORMAL, normals.data(), pointCnt / 3, 3, RED::MFT_FLOAT, iresmgr->GetState()));
         std::vector<double>().swap(normals);
 
-        //RC_TEST(imesh->BuildTextureCoordinates(RED::MESH_CHANNEL::MCL_TEX0, RED::MTCM_BOX, RED::Matrix::IDENTITY, iresmgr->GetState()));
-        std::vector<float> fUVs(uvs, uvs + pointCnt / 3 * 2);
-        RC_TEST(imesh->SetArray(RED::MESH_CHANNEL::MCL_TEX0, fUVs.data(), pointCnt / 3, 2, RED::MFT_FLOAT, iresmgr->GetState()));
-        std::vector<float>().swap(fUVs);
+        if (nullptr != uvs)
+        {
+            std::vector<float>().swap(m_floorUVArr);
+            for (int i = 0; i < pointCnt / 3 * 2; i++) 
+                m_floorUVArr.push_back((float)uvs[i]);
+            RC_TEST(imesh->SetArray(RED::MESH_CHANNEL::MCL_TEX0, m_floorUVArr.data(), pointCnt / 3, 2, RED::MFT_FLOAT, iresmgr->GetState()));
+        }
+        else
+        {
+            RC_TEST(imesh->BuildTextureCoordinates(RED::MESH_CHANNEL::MCL_TEX0, RED::MTCM_BOX, RED::Matrix::IDENTITY, iresmgr->GetState()));
+        }
 
         RC_TEST(itransform->AddChild(mesh, RED_SHP_DAG_NO_UPDATE, iresmgr->GetState()));
 
@@ -522,13 +529,14 @@ namespace HC_luminate_bridge {
         return true;
     }
 
-    bool HCLuminateBridge::updateFloorMaterial(const double* color)
+    bool HCLuminateBridge::updateFloorMaterial(const double* color, const char* texturePath, const double uvScale)
     {
         ConversionContextNode* conversionDataNode = (ConversionContextNode*)m_conversionDataPtr.get();
         if (nullptr == conversionDataNode->floorMesh)
             return false;
 
         RED::Object* floorMesh = conversionDataNode->floorMesh;
+        RED::IMeshShape* imesh = floorMesh->As<RED::IMeshShape>();
 
         RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
         RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
@@ -548,11 +556,31 @@ namespace HC_luminate_bridge {
         RED::Color anisotropyColor = RED::Color(0.25f, 0.25f, 0.25f, 1.f);
         RED::Color transmissionColor = RED::Color(1.f - fA, 1.f - fA, 1.f - fA, 1.f - fA);
 
+        resetFrame();
+
+        // Set UV scale
+        if (m_floorUVArr.size() && 0 < uvScale)
+        {
+            std::vector<float> uvArr;
+            for (int i = 0; i < m_floorUVArr.size(); i++)
+                uvArr.push_back(m_floorUVArr[i] * uvScale);
+            RC_TEST(imesh->SetArray(RED::MESH_CHANNEL::MCL_TEX0, uvArr.data(), int(uvArr.size() / 2), 2, RED::MFT_FLOAT, iresmgr->GetState()));
+        }
+
+        // Load texture
+        RED::Object* texture = NULL;
+        if (strlen(texturePath)) {
+            // Load a texture:
+            RC_TEST(iresmgr->CreateImage2D(texture, iresmgr->GetState()));
+            RC_TEST(RED::ImageTools::Load(texture, texturePath, RED::FMT_RGB, false, false, RED::TGT_TEX_2D, iresmgr->GetState()));
+
+        }
+
         RC_TEST(imaterial->SetupRealisticMaterial(
 
             false,                                                         // Double sided
             true,                                                          // Fresnel
-            deffuseColor, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0,   // Diffusion
+            deffuseColor, texture, RED::Matrix::IDENTITY, RED::MCL_TEX0,   // Diffusion
             feflectionColor, NULL, RED::Matrix::IDENTITY, RED::MCL_TEX0, // Reflection
             RED::Color::BLACK, FLT_MAX,                                    // Reflection fog
             false, false, NULL, RED::Matrix::IDENTITY,                     // Environment
@@ -572,7 +600,6 @@ namespace HC_luminate_bridge {
         if (material != nullptr)
         {
             RC_TEST(floorMesh->As<RED::IShape>()->SetMaterial(material, iresmgr->GetState()));
-            resetFrame();
         
             return true;
         }

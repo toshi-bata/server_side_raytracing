@@ -114,8 +114,9 @@ namespace HC_luminate_bridge {
 		// segment update
 		bool m_selectedSegmentTransformIsDirty;
 
-		// Static Fields:
-		// --------------
+		// Floor UV param
+		std::vector<float> m_floorUVArr;
+
 	public:
 		static const RED::Matrix s_leftHandedToRightHandedMatrix;
 
@@ -222,7 +223,7 @@ namespace HC_luminate_bridge {
 
 		bool addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs);
 		bool deleteFloorMesh();
-		bool updateFloorMaterial(const double* color);
+		bool updateFloorMaterial(const double* color, const char* texturePath, const double uvScale = 0.0);
 
 	private:
 		/**
