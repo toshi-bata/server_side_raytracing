@@ -198,6 +198,22 @@ class Main {
             title: "Materials",
             closeOnEscape: true,
             position: {my: "left top", at: "left bottom", of: "#toolbarGr"},
+            buttons: {
+                'Close': () => {
+                    $("#materialsDlg").dialog('close');
+                }
+            },
+            open: () => {
+                // Close Add Floor command
+                if ($('#addFloorDlg').dialog('isOpen')) $("#addFloorDlg").dialog('close');
+
+                this._viewer.operatorManager.push(this._setMaterialOpHandle);
+                $('[data-command="SetMaterial"]').data("on", true).css("background-color", "khaki");
+            },
+            close: () => {
+                this._setDefaultOperators();
+                $('[data-command="SetMaterial"]').data("on", false).css("background-color", "gainsboro");
+            }
         });
         $('#checkOverrideMaterial').prop('checked', true);
 
@@ -298,10 +314,28 @@ class Main {
             position: {my: "left top", at: "left bottom", of: "#toolbarGr"},
             buttons: {
                 'Close': () => {
-                    this._createFloorOp.Close();
                     $("#addFloorDlg").dialog('close');
                 }
             },
+            open: () => {
+                // Close Set Material command
+                if ($('#materialsDlg').dialog('isOpen')) $("#materialsDlg").dialog('close');
+
+                // Hide progress bar while the command
+                if ($('[data-command="Raytracing"]').data("on")) $('#progress').hide();
+
+                this._viewer.operatorManager.push(this._createFloorOpHandle);
+                this._createFloorOp.Open();
+                $('[data-command="CreateFloor"]').data("on", true).css("background-color", "khaki");
+            },
+            close: () => {
+                // Show progress bar
+                if ($('[data-command="Raytracing"]').data("on")) $('#progress').show();
+
+                this._createFloorOp.Close();
+                this._setDefaultOperators();
+                $('[data-command="CreateFloor"]').data("on", false).css("background-color", "gainsboro");
+            }
         });
         // Create color picker
         $('.simple_color').simpleColor({
@@ -347,16 +381,21 @@ class Main {
                     $('#cadFileSelect').click();
                 } break;
                 case "Raytracing": {
-                    this._invokeRaytracing(command);
+                    if (!isOn) {
+                        $(e.currentTarget).data("on", true).css("background-color", "khaki");
+                        this._invokeRaytracing(command);
+                    }
+                    else {
+                        $(e.currentTarget).data("on", false).css("background-color", "gainsboro");
+                        this._clearRaytracing();
+                    }
                 } break;
                 case "SetMaterial": {
                     if (!isOn) {
                         $('#materialsDlg').dialog('open');
-                        this._viewer.operatorManager.push(this._setMaterialOpHandle);
                     }
                     else {
                         $('#materialsDlg').dialog('close');
-                        this._setDefaultOperators();
                     }
                 } break;
                 case "SetLighting": {
@@ -366,10 +405,11 @@ class Main {
                     $('#upVectorDlg').dialog('open');
                 } break;
                 case "CreateFloor": {
-                    if (!$('#addFloorDlg').dialog('isOpen')) {
+                    if (!isOn) {
                         $('#addFloorDlg').dialog('open');
-                        this._viewer.operatorManager.push(this._createFloorOpHandle);
-                        this._createFloorOp.Open();
+                    }
+                    else {
+                        $('#addFloorDlg').dialog('close');
                     }
                 } break;
                 case "DeleteFloor": {
@@ -382,16 +422,6 @@ class Main {
 
                 } break;
                 default: {} break;
-            }
-        });
-
-        // Toggle button common
-        $(".toggleBtn").on("click", (e) => {
-            let isOn = $(e.currentTarget).data("on");
-            if(isOn) {
-                $(e.currentTarget).data("on", false).css("background-color", "gainsboro");
-            } else {
-                $(e.currentTarget).data("on", true).css("background-color", "khaki");
             }
         });
 
@@ -598,22 +628,17 @@ class Main {
     }
 
     _invokeRaytracing(command) {   
-        if (null == this._timerId) {   
-            $("#loadingImage").show();
+        $("#loadingImage").show();
 
-            const params = this._getRenderingParams();
+        const params = this._getRenderingParams();
 
-            this._serverCaller.CallServerPost(command, params).then(() => {
-                // Enabling commands
-                $('.while_rendering').prop("disabled", false).css("background-color", "gainsboro");
+        this._serverCaller.CallServerPost(command, params).then(() => {
+            // Enabling commands
+            $('.while_rendering').prop("disabled", false).css("background-color", "gainsboro");
 
-                $("#loadingImage").hide();
-                this._invokeDraw();
-            });
-        }
-        else {
-            this._clearRaytracing();
-        }
+            $("#loadingImage").hide();
+            this._invokeDraw();
+        });
     }
 
     _invokeDraw() {
