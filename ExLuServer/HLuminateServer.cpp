@@ -204,8 +204,22 @@ bool HLuminateServer::ClearSession(std::string sessionId)
 {
     if (m_mHLuminateSession.count(sessionId))
     {
+        RED_RC rc;
+        RED::Object* reamgr = RED::Factory::CreateInstance(CID_REDResourceManager);
+        RED::IResourceManager* ireamgr = reamgr->As<RED::IResourceManager>();
+
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
         lumSession.pHCLuminateBridge->resetFrame();
+
+        // Delete env map
+        for (int i = 0; i < lumSession.envMapArr.size(); i++)
+        {
+            if (lumSession.envMapArr[i].imagePath != "") {
+                ireamgr->DeleteImage(lumSession.envMapArr[i].backgroundCubeImage, ireamgr->GetState());
+                rc = RED::Factory::DeleteInstance(lumSession.envMapArr[i].skyLight, ireamgr->GetState());
+            }
+        }
+
         delete lumSession.pHCLuminateBridge;
 
         if (NULL != lumSession.hwnd)
@@ -225,8 +239,11 @@ bool HLuminateServer::LoadEnvMapFile(std::string sessionId, const char* filePath
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
         lumSession.pHCLuminateBridge->resetFrame();
 
-        if (RED_OK != lumSession.pHCLuminateBridge->setEnvMapLightEnvironment(filePath, true, RED::Color::WHITE, thumbnailPath))
+        EnvironmentMapLightingModel envMap;
+        if (RED_OK != lumSession.pHCLuminateBridge->createEnvMapLightEnvironment(filePath, true, RED::Color::WHITE, thumbnailPath, envMap))
             return false;
+
+        m_mHLuminateSession[sessionId].envMapArr.push_back(envMap);
 
         return true;
     }
@@ -408,9 +425,10 @@ bool HLuminateServer::SetLighting(std::string sessionId, int lightingId)
         {
         case 0: lumSession.pHCLuminateBridge->setDefaultLightEnvironment(); break;
         case 1: lumSession.pHCLuminateBridge->setSunSkyLightEnvironment(); break;
-        case 3: lumSession.pHCLuminateBridge->setEnvMapLightEnvironment("", true, RED::Color::WHITE); break;
+        default:
+            int envMapId = lightingId - 2;
+            lumSession.pHCLuminateBridge->setEnvMapLightEnvironment(lumSession.envMapArr[envMapId]);
             break;
-        default: break;
         }
 
         return true;
@@ -485,4 +503,15 @@ bool HLuminateServer::UpdateFloorMaterial(const std::string sessionId, const dou
         return true;
     }
     return false;
+}
+
+int HLuminateServer::GetNewEnvMapId(const std::string sessionId)
+{
+    if (m_mHLuminateSession.count(sessionId))
+    {
+        LuminateSession lumSession = m_mHLuminateSession[sessionId];
+
+        return lumSession.envMapArr.size();
+    }
+    return -1;
 }

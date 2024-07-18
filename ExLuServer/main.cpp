@@ -504,7 +504,7 @@ answer_to_connection(void* cls,
             m_pHLuminateServer->ClearSession(con_info->sessionId);
 
             char filePath[FILENAME_MAX];
-            
+
             // Delete previous rendering image
 
 #ifndef _WIN32
@@ -519,17 +519,21 @@ answer_to_connection(void* cls,
             }
 #endif
             // Delete thumbnail image
-#ifndef _WIN32
-            sprintf(filePath, "../Lighting/EnvMapThumb-%s.png", con_info->sessionId);
-            delete_files(filePath);
-#else
+            int envMapId = m_pHLuminateServer->GetNewEnvMapId(con_info->sessionId);
+            for (int i = 0; i < envMapId; i++)
             {
-                sprintf(filePath, "..\\Lighting\\EnvMapThumb-%s.png", con_info->sessionId);
-                wchar_t wFilePath[_MAX_FNAME];
-                mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
-                _wremove(wFilePath);
-            }
+#ifndef _WIN32
+                sprintf(filePath, "../Lighting/EnvMapThumb_%s_%d.png", con_info->sessionId, i + 1);
+                delete_files(filePath);
+#else
+                {
+                    sprintf(filePath, "..\\Lighting\\EnvMapThumb_%s_%d.png", con_info->sessionId, i + 1);
+                    wchar_t wFilePath[_MAX_FNAME];
+                    mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
+                    _wremove(wFilePath);
+                }
 #endif
+            }
 
             // Delete texture file
             if (0 < strlen(s_floorTexturePath))
@@ -590,11 +594,12 @@ answer_to_connection(void* cls,
                 if (0 == strcmp(lowExt, "hdr"))
                 {
                     // Load environment map file
+                    int envMapId = m_pHLuminateServer->GetNewEnvMapId(con_info->sessionId);
                     char thumbnailPath[FILENAME_MAX];
 #ifndef _WIN32
-                    sprintf(thumbnailPath, "../Lighting/EnvMapThumb-%s.png", con_info->sessionId);
+                    sprintf(thumbnailPath, "../Lighting/EnvMapThumb_%s_%d.png", con_info->sessionId, envMapId + 1);
 #else
-                    sprintf(thumbnailPath, "..\\Lighting\\EnvMapThumb-%s.png", con_info->sessionId);
+                    sprintf(thumbnailPath, "..\\Lighting\\EnvMapThumb_%s_%d.png", con_info->sessionId, envMapId + 1);
 #endif
                     if (m_pHLuminateServer->LoadEnvMapFile(con_info->sessionId, filePath, thumbnailPath))
                         floatArr.push_back(1);

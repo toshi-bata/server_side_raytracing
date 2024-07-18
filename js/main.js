@@ -20,6 +20,7 @@ class Main {
         this._createFloorOp;
         this._createFloorOpHandle;
         this._materialDB;
+        this._lightingDB;
         this._currentMaterialName;
         this._currentMaterialId;
         this._currentLightingId;
@@ -217,7 +218,7 @@ class Main {
         });
         $('#checkOverrideMaterial').prop('checked', true);
 
-        // Load material info from JSON file
+        // Load material list from JSON file
         const url = "MaterialLibrary/Catalog/material_list.json";
         $.getJSON(url, (obj) => {
             this._materialDB = obj;
@@ -238,9 +239,6 @@ class Main {
             this._setMaterialThumbnail(val);
         });
 
-        // Lighting thumbnail click event handler
-        this._setLightingThumbClickHandler();
-
         // Prepare Lighting Mode dialog
         $("#lightingModeDlg").dialog({
             autoOpen: false,
@@ -257,6 +255,21 @@ class Main {
             }
         });
         
+        // Load default lighting list from JSON file
+        const lighting_url = "Lighting/lighting_list.json";
+        $.getJSON(lighting_url, (obj) => {
+            if (undefined != obj.default) {
+                this._lightingDB = obj.default;
+
+                // Lighting thumbnail click event handler
+                this._setLightingThumbClickHandler();
+
+                this._currentLightingId = 1;
+                $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').addClass('thumbnail-selected');
+
+            }
+        });
+
         // Env file uploading
         $("#UploadEnvDlg").dialog({
             autoOpen: false,
@@ -433,6 +446,7 @@ class Main {
         });
 
         // Toolbar default
+        $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
         $('.while_rendering').prop("disabled", true).css("background-color", "darkgrey");
 
         // Slider
@@ -559,22 +573,47 @@ class Main {
             if (0 < arr.length) {
                 if (1 == arr[0]) {
                     // Add env map thumbnail 
-                    const image = new Image();
-                    image.src = "Lighting/EnvMapThumb-" + this._sessionId + ".png";
-                    let $ele = $('<div />', {class:'itemList_thumbnail lightingItem thumbnail-selected',title: 'Env Map'});
-                    $($ele).append(image);
-                    $($ele).append("Env Map");
-                    $('#lightingList').append($ele);
-
-                    this._currentLightingId = 4;
+                    const id = this._lightingDB.length - 1;
+                    this._lightingDB.push({
+                        id: this._lightingDB.length,
+                        name: 'My EnvMap-' + String(id), 
+                        img: "EnvMapThumb_" + this._sessionId + "_" + String(id) + ".png"
+                    });
 
                     this._setLightingThumbClickHandler();
+
+                    this._currentLightingId = this._lightingDB.length;
+                    $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').addClass('thumbnail-selected');
                 }
             }
         });
     }
 
     _setLightingThumbClickHandler() {
+        // Set default lightings
+        $('#lightingList').empty();
+
+        const list = JSON.parse(JSON.stringify(this._lightingDB));
+
+        // Add load env map item
+        list.push({
+            id: this._lightingDB.length,
+            name: "Load Environment Map", 
+            img: "Load.png"
+        });
+
+        // Set thumbnails
+        for (let item of list) {
+            const image = new Image();
+            image.src = "Lighting/" + item.img;
+
+            let $ele = $('<div />', {class:'itemList_thumbnail lightingItem',title: item.name});
+            $($ele).append(image);
+            $($ele).append(item.name);
+
+            $('#lightingList').append($ele);
+        }
+        
         // Lighting thumbnail click event handler
         $('.itemList_thumbnail').on('click', (e) => {
             const cls = $(e.currentTarget).attr('class');
@@ -587,8 +626,7 @@ class Main {
 
                 $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').removeClass('thumbnail-selected');
 
-                const title = $(e.currentTarget).attr('title');
-                if ('Load Environment Map' == title) {
+                if (this._lightingDB.length + 1 == id) {
                     $('#UploadEnvDlg').dialog('open');
                     $('#envFileSelect').click();
                 }
@@ -596,7 +634,11 @@ class Main {
                     this._currentLightingId = id;
                     $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').addClass('thumbnail-selected');
 
-                    this._setLightingMode(this._currentLightingId - 1);
+                    const params = {
+                        lightingId: this._currentLightingId - 1
+                    }
+            
+                    this._serverCaller.CallServerPost("SetLighting", params);
                 }
             }
         });
@@ -711,15 +753,6 @@ class Main {
         this._serverCaller.CallServerPost("SetMaterial", params).then((arr) => {
             this._viewer.model.resetModelHighlight();
             this._isAutoSlide = true;
-        });
-    }
-
-    _setLightingMode(lightingId) {
-        const params = {
-            lightingId: lightingId
-        }
-
-        this._serverCaller.CallServerPost("SetLighting", params).then((arr) => {
         });
     }
 

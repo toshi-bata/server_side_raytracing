@@ -18,6 +18,7 @@ private:
 	{
 		HCLuminateBridge* pHCLuminateBridge = NULL;
 		HWND hwnd;
+		std::vector<EnvironmentMapLightingModel> envMapArr;
 	};
 
 	std::map<std::string, LuminateSession> m_mHLuminateSession;
@@ -49,6 +50,6 @@ public:
 	bool AddFloorMesh(const std::string sessionId, const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs);
 	bool DeleteFloorMesh(const std::string sessionId);
 	bool UpdateFloorMaterial(const std::string sessionId, const double* color, const char* texturePath, const double uvScale = 0.0);
-
+	int GetNewEnvMapId(const std::string sessionId);
 };
 

@@ -1,0 +1,6 @@
+{
+    "default": [
+        {"id": 0, "name": "Default", "img": "Default.png"},
+        {"id": 1, "name": "Sun Sky Model", "img": "SunSkyModel.png"}
+    ]
+}

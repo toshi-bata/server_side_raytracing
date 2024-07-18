@@ -207,7 +207,10 @@ namespace HC_luminate_bridge {
 		 * @param[in] a_backgroundColor Background color to show if the image is not shown.
 		 */
 		RED_RC
-			setEnvMapLightEnvironment(std::string const& a_imageFilepath, bool a_showImage, RED::Color const& a_backgroundColor, const char* thumbFilePath = NULL);
+			setEnvMapLightEnvironment(EnvironmentMapLightingModel envMap);
+
+		RED_RC
+			createEnvMapLightEnvironment(std::string const& a_imageFilepath, bool a_showImage, RED::Color const& a_backgroundColor, const char* thumbFilePath, EnvironmentMapLightingModel& envMap);
 
 		/**
 		* Set sync camera.
