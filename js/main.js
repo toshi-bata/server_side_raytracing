@@ -484,9 +484,6 @@ class Main {
             $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
             $('.while_rendering').prop("disabled", true).css("background-color", "darkgrey");
 
-            // Set default opetators
-            this._setDefaultOperators();
-
             if (undefined != this._materialDB) {
                 // Set default material type
                 $('#matTypeId').val("Metal");
@@ -514,8 +511,11 @@ class Main {
                     // Reset server
                     this._serverCaller.CallServerPost("Clear").then(() => {
                         this._requestServerProcess();
+                        // Set default opetators
+                        this._setDefaultOperators();
+
+                        resolve();
                     });
-                    resolve();
                 });
             }
             else {
