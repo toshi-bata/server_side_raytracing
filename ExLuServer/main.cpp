@@ -500,9 +500,6 @@ answer_to_connection(void* cls,
             // Delete ModelFile
             pExProcess->DeleteModelFile(con_info->sessionId);
 
-            // Delete Luminate session
-            m_pHLuminateServer->ClearSession(con_info->sessionId);
-
             char filePath[FILENAME_MAX];
 
             // Delete previous rendering image
@@ -535,6 +532,9 @@ answer_to_connection(void* cls,
 #endif
             }
 
+            // Delete Luminate session
+            m_pHLuminateServer->ClearSession(con_info->sessionId);
+
             // Delete texture file
             if (0 < strlen(s_floorTexturePath))
             {
@@ -548,7 +548,6 @@ answer_to_connection(void* cls,
                 }
 #endif
             }
-            sprintf(s_floorTexturePath, "");
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
@@ -873,6 +872,20 @@ answer_to_connection(void* cls,
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
             
+            // Delete texture file
+            if (0 < strlen(s_floorTexturePath))
+            {
+#ifndef _WIN32
+                delete_files(s_floorTexturePath);
+#else
+                {
+                    wchar_t wFilePath[_MAX_FNAME];
+                    size_t iRet;
+                    mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, s_floorTexturePath, _MAX_FNAME);
+                    _wremove(wFilePath);
+                }
+#endif
+            }
             sprintf(s_floorTexturePath, "");
 
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
@@ -890,14 +903,6 @@ answer_to_connection(void* cls,
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
 
-            return sendResponseText(connection, con_info->answerstring, con_info->answercode);
-        }
-        else if (0 == strcmp(url, "/ClearFloorTexture"))
-        {
-            sprintf(s_floorTexturePath, "");
-
-            con_info->answerstring = response_success;
-            con_info->answercode = MHD_HTTP_OK;
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
         }
     }

@@ -36,10 +36,10 @@ class Main {
         this._timerId = null;
         this._isBusy = false;
         this._floorMeshId = null;
-        this._floorColor = [255, 255, 255];
         this._requestServerProcess();
         this._createViewer(viewerMode, modelName);
         this._initEvents();
+        this._invokeNew();
     }
 
     _requestServerProcess () {
@@ -186,10 +186,6 @@ class Main {
             }
         });
 
-        // Tolerance select
-        $('#sewingTol').val(0.01);
-        $('#classifyTol').val(0.0001);
-
         // Prepare Material dialog
         $("#materialsDlg").dialog({
             autoOpen: false,
@@ -254,21 +250,6 @@ class Main {
                 }
             }
         });
-        
-        // Load default lighting list from JSON file
-        const lighting_url = "Lighting/lighting_list.json";
-        $.getJSON(lighting_url, (obj) => {
-            if (undefined != obj.default) {
-                this._lightingDB = obj.default;
-
-                // Lighting thumbnail click event handler
-                this._setLightingThumbClickHandler();
-
-                this._currentLightingId = 1;
-                $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').addClass('thumbnail-selected');
-
-            }
-        });
 
         // Env file uploading
         $("#UploadEnvDlg").dialog({
@@ -305,8 +286,6 @@ class Main {
                 }
             },
         });
-        $("#upVector").val("Z");
-        $("#rotationAng").val(0);
 
         $('#upVector').change((e) => {
             this._changeUpVector();
@@ -358,8 +337,7 @@ class Main {
                 this._floorColor = hex2rgb(hex);
             }
         });
-        $('#colorA').val(1.0);
-        $('#textureScale').val(1.0);
+
         $("#addFloorDlg").submit((e) => {
             // Cancel default behavior (abort form action)
             e.preventDefault();
@@ -389,6 +367,9 @@ class Main {
             let isOn = $(e.currentTarget).data("on");
 
             switch(command) {
+                case "New": {
+                    this._invokeNew();
+                } break;
                 case "Upload": {
                     $('#Upload3DDlg').dialog('open');
                     $('#cadFileSelect').click();
@@ -445,10 +426,6 @@ class Main {
             $(e.currentTarget).data("on", false).css("background-color", "gainsboro");
         });
 
-        // Toolbar default
-        $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
-        $('.while_rendering').prop("disabled", true).css("background-color", "darkgrey");
-
         // Slider
         $("#opacitySlider").slider({
             value: 1,
@@ -475,6 +452,76 @@ class Main {
         this._viewer.operatorManager.push(Communicator.OperatorId.Handle);
         this._viewer.operatorManager.push(Communicator.OperatorId.NavCube);
         this._viewer.operatorManager.push(Communicator.OperatorId.AxisTriad);
+    }
+
+    _invokeNew() {
+        return new Promise((resolve, reject) => {
+            // Stop rendering
+            this._clearRaytracing();
+
+            // Close Set Material dialog
+            if ($('#materialsDlg').dialog('isOpen')) $("#materialsDlg").dialog('close');
+
+            // Close Add Floor dialog
+            if ($('#addFloorDlg').dialog('isOpen')) $("#addFloorDlg").dialog('close');
+
+            // Set default values of Add Floor dialog
+            $('.simple_color').setColor('#ffffff');
+            this._floorColor = [255, 255, 255];
+            $('#colorA').val(1.0);
+            $('#textureScale').val(1.0);
+            $('#textureFileSelect').val('');
+
+            // Delete floor mesh
+            this._deleteFloor();
+
+            // Set default values of Up Vector dialog
+            $("#upVector").val("Z");
+            $("#rotationAng").val(0);
+
+            // Set toolbar default
+            $('[data-command="Raytracing"]').data("on", false);
+            $('[data-command="Raytracing"]').prop("disabled", true).css("background-color", "darkgrey");
+            $('.while_rendering').prop("disabled", true).css("background-color", "darkgrey");
+
+            // Set default opetators
+            this._setDefaultOperators();
+
+            if (undefined != this._materialDB) {
+                // Set default material type
+                $('#matTypeId').val("Metal");
+                this._setMaterialThumbnail("Metal");
+            }
+
+            // Load default lighting list from JSON file
+            const lighting_url = "Lighting/lighting_list.json";
+            $.getJSON(lighting_url, (obj) => {
+                if (undefined != obj.default) {
+                    this._lightingDB = obj.default;
+
+                    // Lighting thumbnail click event handler
+                    this._setLightingThumbClickHandler();
+
+                    this._currentLightingId = 1;
+                    $(`.itemList_thumbnail:nth-child(${this._currentLightingId})` + '.lightingItem').addClass('thumbnail-selected');
+
+                }
+            });
+
+            if (undefined != this._viewer) {
+                // Delete model
+                this._viewer.model.switchToModel("_empty").then(() => {
+                    // Reset server
+                    this._serverCaller.CallServerPost("Clear").then(() => {
+                        this._requestServerProcess();
+                    });
+                    resolve();
+                });
+            }
+            else {
+                resolve();
+            }
+        });
     }
 
     _setMaterialThumbnail(matType) {
@@ -528,8 +575,7 @@ class Main {
         const now = new Date().getTime();
         $('#backgroundImg').attr('src', 'css/images/default_background.png');
 
-        this._serverCaller.CallServerPost("Clear").then(() => {
-            this._requestServerProcess();
+        this._invokeNew().then(() => {
             this._serverCaller.CallServerPost("SetOptions", params).then(() => {
                 this._serverCaller.CallServerSubmitFile(formData).then((arr) => {
                     let dataArr = Array.from(arr);
@@ -817,18 +863,20 @@ class Main {
         this._viewer.model.setNodesOpacity([this._floorMeshId], opacity);
 
         await this._serverCaller.CallServerPost("AddFloorMesh", params);
-        this._updateFloorMaterial();
+        this._updateFloorMaterial(null);
     }
 
     async _deleteFloor() {
-        this._createFloorOp.Delete();
-        $('#addFloorDlg').dialog('close');
+        if (null != this._floorMeshId) {
+            this._createFloorOp.Delete();
+            $('#addFloorDlg').dialog('close');
 
-        await this._viewer.model.deleteNode( this._floorMeshId);
-        this._floorMeshId = null;
+            await this._viewer.model.deleteNode( this._floorMeshId);
+            this._floorMeshId = null;
 
-        await this._serverCaller.CallServerPost("DeleteFloorMesh", {});
-        this._setDefaultOperators();
+            await this._serverCaller.CallServerPost("DeleteFloorMesh", {});
+            this._setDefaultOperators();
+        }
     }
 
     async _updateFloorMaterial(formData) {
