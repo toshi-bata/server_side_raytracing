@@ -60,7 +60,7 @@ HWND CreateWndow(const int width, const int height)
 
     RegisterClassW(&wc);
     HWND hwnd = CreateWindowEx(WS_EX_CLIENTEDGE, L"WindowClass", L"myLuminateWindow",
-        WS_SYSMENU | WS_BORDER | WS_CAPTION | WS_VISIBLE,
+        WS_MINIMIZE | WS_EX_TOOLWINDOW,
         100, 100, width, height, NULL, NULL, hInstance, NULL);
 
     return hwnd;
