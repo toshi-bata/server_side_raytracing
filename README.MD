@@ -3,9 +3,9 @@ This demo runs raytracing rendring in server side using offscreen buffer of HOOP
 
 ## Dependencies
 ### SDKs in use (version)
-* HOOPS Communicator (2024.3.0)
-* HOOPS Exchange (2024.3.0)
-* HOOPS Luminate (2024.3.0)
+* HOOPS Communicator (2024.5.0)
+* HOOPS Exchange (2024.5.0)
+* HOOPS Luminate (2024.5.0)
 
 ### Third paty module
 * libmicrohttpd (1.0.0)<br>
@@ -21,11 +21,11 @@ This demo runs raytracing rendring in server side using offscreen buffer of HOOP
 &emsp;&emsp;&emsp;+ _VS2019.bat (for Windows)<br>
 &emsp;&emsp;+ win64 (copy win64 folder from Communicator_SDK\authoring\converter\bin)<br>
 &emsp;&emsp;&emsp;+ ExLuServer.exe<br>
-&emsp;&emsp;&emsp;+ REDCore.dll (copy from Luminate_SDK\BuildImage\Win64)<br>
-&emsp;&emsp;&emsp;+ Embree.dll (copy from Luminate_SDK\BuildImage\Win64)<br>
+&emsp;&emsp;&emsp;+ REDCore.dll (copy from Luminate_SDK\bin\Win64)<br>
+&emsp;&emsp;&emsp;+ Embree.dll (copy from Luminate_SDK\bin\Win64)<br>
 &emsp;&emsp;+ win64d (copy win64d folder from Communicator_SDK\authoring\converter\bin)<br>
-&emsp;&emsp;&emsp;+ REDCore.dll (copy from Luminate_SDK\BuildImage\Win64)<br>
-&emsp;&emsp;&emsp;+ Embree.dll (copy from Luminate_SDK\BuildImage\Win64)<br>
+&emsp;&emsp;&emsp;+ REDCore.dll (copy from Luminate_SDK\bin\Win64)<br>
+&emsp;&emsp;&emsp;+ Embree.dll (copy from Luminate_SDK\bin\Win64)<br>
 &emsp;&emsp;+ main.html<br>
 &emsp;&emsp;+ js<br>
 &emsp;&emsp;&emsp;+ main.js<br>
@@ -38,7 +38,7 @@ ExLuServer is a server side console application which is using HOOPS Exchange, L
 #### Windows
 1. Unzip HOOPS Exchange SDK and locate a valid hoops_license.h in `includ/` 
 2. Unzip HOOPS Communicator SDK and locate a valid hoops_license.h in `authoring/libconverter/include/`
-3. Unzip HOOPS Luminate SDK and locate a valid hoops_license.h in `Redsdk.m/Public/`
+3. Unzip HOOPS Luminate SDK and locate a valid hoops_license.h in `include/`
 4. Unzip libconverter SDK
 5. Edit ExLuServer¥_VS2019.bat accoording to your environment and open ExLuServer.sln using the bat file
 6. Build the solution (ExLuServer.exe will be created in `server_side_raytracing/win64` folder)

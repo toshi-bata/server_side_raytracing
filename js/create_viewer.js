@@ -1,3 +1,4 @@
+import * as Communicator from "@hoops/web-viewer";
 function createViewer(viewerMode, modelName, containerId, reverseProxy, modelDirArr) {
     return new Promise(function (resolve, reject) {
         if (viewerMode == "SCS" || viewerMode == "scs") {
@@ -37,6 +38,7 @@ function createViewer(viewerMode, modelName, containerId, reverseProxy, modelDir
                     model: modelName,
                     rendererType: rendererType,
                     boundingPreviewMode: "none",
+                    enginePath: "../"
                 });
             // }
             // else {
@@ -107,4 +109,6 @@ function requestEndpoint(rendererType, reverseProxy, modelDirArr) {
     });
     return promise;
 }
-
+export {
+    createViewer
+}

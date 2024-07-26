@@ -1,3 +1,4 @@
+import * as Communicator from "@hoops/web-viewer";
 class SetMaterialOperator {
     constructor(viewer, owner) {
         this._viewer = viewer;
@@ -38,4 +39,7 @@ class SetMaterialOperator {
             });
         }
     }
+}
+export {
+    SetMaterialOperator
 }

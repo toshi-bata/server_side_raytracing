@@ -1,3 +1,7 @@
+import * as Communicator from "@hoops/web-viewer";
+import { createViewer } from "/js/create_viewer.js";
+import { SetMaterialOperator } from "/js/SetMaterialOp.js";
+import { CreateFloorOperator } from "/js/CreateFloorOp.js";
 class Main {
     constructor() {
         this._viewer;
@@ -966,4 +970,7 @@ class Main {
 
         this._invokeDraw();
     }
+}
+export {
+    Main
 }

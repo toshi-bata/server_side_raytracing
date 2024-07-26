@@ -1,3 +1,4 @@
+import * as Communicator from "@hoops/web-viewer";
 class CreateFloorOperator {
     constructor(viewer, owner) {
         this._viewer = viewer;
@@ -176,13 +177,13 @@ class FloorMarkup extends Communicator.Markup.MarkupItem {
         this._middleCirArr = [];
         this._rad = 4;
         this._selectedId = -1;
-        this._lines = new Communicator.Markup.Shape.LineCollection();
+        this._lines = new Communicator.Markup.Shapes.LineCollection();
         this._lines.setStrokeColor(new Communicator.Color(255, 0, 0));
         this._lines.setStrokeWidth(1);
         this._midVertices = {};
 
         for (let i = 0; i < vertices.length; i++) {
-            const cir = new Communicator.Markup.Shape.Circle();
+            const cir = new Communicator.Markup.Shapes.Circle();
             cir.setRadius(this._rad);
             cir.setFillOpacity(0);
             cir.setStrokeColor(new Communicator.Color(255, 0, 0));
@@ -191,7 +192,7 @@ class FloorMarkup extends Communicator.Markup.MarkupItem {
         }
 
         for (let i = 0; i < vertices.length; i++) {
-            const cir = new Communicator.Markup.Shape.Circle();
+            const cir = new Communicator.Markup.Shapes.Circle();
             cir.setRadius(this._rad);
             cir.setFillOpacity(0);
             cir.setStrokeColor(new Communicator.Color(255, 255, 0));
@@ -315,4 +316,7 @@ class FloorMarkup extends Communicator.Markup.MarkupItem {
         }
         this._viewer.markupManager.refreshMarkup();
     }
+}
+export {
+    CreateFloorOperator
 }

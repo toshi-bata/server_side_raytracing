@@ -13,19 +13,26 @@
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
 
         <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
-        <script type="text/javascript" src="../src/js/hoops_web_viewer.js"></script>
-        <script type="text/javascript" src="js/main.js"></script>
+        <script type="importmap">
+            {
+              "imports": {
+                "@hoops/web-viewer": "../hoops-web-viewer.mjs"
+              }
+            }
+        </script>
+        <script type="module">
+            import {WebViewer} from "@hoops/web-viewer";
+            WebViewer.defaultEnginePath = "..";
+        </script>
         <script type="text/javascript" src="js/ServerCaller.js"></script>
-        <script type="text/javascript" src="js/create_viewer.js"></script>
         <script type="text/javascript" src="js/general_func.js"></script>
-        <script type="text/javascript" src="js/SetMaterialOp.js"></script>
-        <script type="text/javascript" src="js/CreateFloorOp.js"></script>
         <script type="text/javascript" src="js/jquery.simple-color.js"></script>
 
         <link rel="stylesheet" href="css/main.css">
         <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
 
-        <script type="text/javascript">
+        <script type="module">
+            import { Main } from "/js/main.js";
             var main;
             var callbacks;
             let viewer;

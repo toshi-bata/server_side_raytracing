@@ -397,7 +397,7 @@ namespace HC_luminate_bridge {
 
         ProjectionMode projectionMode = ProjectionMode::Orthographic;
 
-        if(1 == a_projection)
+        if(0 == a_projection)
             projectionMode = ProjectionMode::Perspective;
 
         //////////////////////////////////////////
