@@ -22,7 +22,8 @@
     }
 
 using namespace hoops_luminate_bridge;
-
+#ifndef _WIN32
+#else
 //******************************************************************************
 //*** Win32 WindowProc *********************************************************
 //******************************************************************************
@@ -66,6 +67,7 @@ HWND CreateWndow(const int width, const int height)
 
     return hwnd;
 }
+#endif
 
 bool HLuminateServer::Terminate()
 {
@@ -108,7 +110,9 @@ bool HLuminateServer::PrepareRendering(std::string sessionId,
 
         CameraInfo cameraInfo = lumSession.pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
-        lumSession.hwnd = CreateWndow(0, 0);
+        //lumSession.hwnd = CreateWndow(0, 0);
+        lumSession.hwnd = GetConsoleWindow();
+
         std::string filepath = "";
         lumSession.pHCLuminateBridge->initialize(HOOPS_LICENSE, lumSession.hwnd, width, height, filepath, cameraInfo);
 
@@ -188,8 +192,8 @@ bool HLuminateServer::ClearSession(std::string sessionId)
 
         delete lumSession.pHCLuminateBridge;
 
-        if (NULL != lumSession.hwnd)
-            DestroyWindow(lumSession.hwnd);
+        //if (NULL != lumSession.hwnd)
+        //    DestroyWindow(lumSession.hwnd);
 
         m_mHLuminateSession.erase(sessionId);
 
