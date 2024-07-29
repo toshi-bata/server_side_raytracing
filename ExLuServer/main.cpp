@@ -21,7 +21,7 @@
 #include <windows.h>
 #include "HLuminateServer.h"
 
-using namespace HC_luminate_bridge;
+using namespace hoops_luminate_bridge;
 
 #ifdef _MSC_VER
 #ifndef strcasecmp

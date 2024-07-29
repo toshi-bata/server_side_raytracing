@@ -11,7 +11,7 @@
 #include <REDState.h>
 #include <REDIMeshShape.h>
 
-namespace HC_luminate_bridge {
+namespace hoops_luminate_bridge {
     /**
      * Enumeration of different handedness handled by 3DF/HPS.
      */
@@ -364,6 +364,6 @@ namespace HC_luminate_bridge {
                                        TextureNameImageNameMap& a_ioTextureNameImageNameMap,
                                        PBRToRealisticConversionMap& a_ioPBRToRealisticConversionMap,
                                        RealisticMaterialInfo& a_ioMaterialInfo);
-} // namespace HC_luminate_bridge
+} // namespace hoops_luminate_bridge
 
 #endif

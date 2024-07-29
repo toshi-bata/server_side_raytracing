@@ -8,7 +8,7 @@ using std::size_t;
 
 #include <REDObject.h>
 
-namespace HC_luminate_bridge {
+namespace hoops_luminate_bridge {
 
     /**
      * Structure storing data about an AxisTriad.

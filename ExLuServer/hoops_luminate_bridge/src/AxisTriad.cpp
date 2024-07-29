@@ -1,4 +1,4 @@
-#include "AxisTriad.h"
+#include <hoops_luminate_bridge/AxisTriad.h>
 
 #include <REDObject.h>
 #include <REDFactory.h>
@@ -12,9 +12,9 @@
 #include <REDLayerSet.h>
 #include <REDITransformShape.h>
 
-#include "LuminateRCTest.h"
+#include <hoops_luminate_bridge/LuminateRCTest.h>
 
-namespace HC_luminate_bridge {
+namespace hoops_luminate_bridge {
     RED_RC createAxisSystemMaterial(const RED::Color& a_color, RED::Object*& a_outMaterial)
     {
         //////////////////////////////////////////
@@ -72,7 +72,6 @@ namespace HC_luminate_bridge {
         RED::IWindow* iwindow = a_window->As<RED::IWindow>();
 
         RED::Object* vrl;
-        //RC_TEST(iwindow->GetDefaultVRL(vrl));
         RC_TEST(iwindow->GetVRL(vrl, a_num_vrl));
         RED::IViewpointRenderList* ivrl = vrl->As<RED::IViewpointRenderList>();
 

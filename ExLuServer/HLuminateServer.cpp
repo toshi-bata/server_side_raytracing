@@ -20,7 +20,7 @@
         }                                                                          \
     }
 
-using namespace HC_luminate_bridge;
+using namespace hoops_luminate_bridge;
 
 //******************************************************************************
 //*** Win32 WindowProc *********************************************************
@@ -142,7 +142,7 @@ bool HLuminateServer::PrepareRendering(std::string sessionId,
 
     if (0 == m_mHLuminateSession.count(sessionId))
     {
-        lumSession.pHCLuminateBridge = new HCLuminateBridge();
+        lumSession.pHCLuminateBridge = new HoopsLuminateBridgeEx();
 
         CameraInfo cameraInfo = lumSession.pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
@@ -171,7 +171,9 @@ bool HLuminateServer::StartRendering(std::string sessionId,
 
         CameraInfo cameraInfo = lumSession.pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
-        lumSession.pHCLuminateBridge->syncScene(width, height, aMeshProps, cameraInfo);
+        lumSession.pHCLuminateBridge->setMeshProps(aMeshProps);
+        
+        lumSession.pHCLuminateBridge->syncScene(width, height, cameraInfo);
 
         return true;
     }
@@ -283,7 +285,7 @@ bool HLuminateServer::Resize(std::string sessionId,
     return false;
 }
 
-void HLuminateServer::stopFrameTracing(HCLuminateBridge* bridge)
+void HLuminateServer::stopFrameTracing(HoopsLuminateBridge* bridge)
 {
     RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
     RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
@@ -298,7 +300,7 @@ void HLuminateServer::stopFrameTracing(HCLuminateBridge* bridge)
     bridge->resetFrame();
 }
 
-bool HLuminateServer::loadLibMaterial(HCLuminateBridge* bridge, RED::String redfilename, RED::Object*& libraryMaterial)
+bool HLuminateServer::loadLibMaterial(HoopsLuminateBridge* bridge, RED::String redfilename, RED::Object*& libraryMaterial)
 {
     RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
     RED::IResourceManager* iresmgr = resmgr->As<RED::IResourceManager>();
@@ -347,7 +349,7 @@ bool HLuminateServer::SetMaterial(std::string sessionId, const char* nodeName, R
         LuminateSession lumSession = m_mHLuminateSession[sessionId];
 
         // Apply material
-        HCLuminateBridge* bridge = lumSession.pHCLuminateBridge;
+        HoopsLuminateBridgeEx* bridge = lumSession.pHCLuminateBridge;
         RED::Object* selectedTransformNode = bridge->getSelectedLuminateTransformNode((char*)nodeName);
 
         if (selectedTransformNode != nullptr) {

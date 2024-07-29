@@ -1,4 +1,4 @@
-#include "LightingEnvironment.h"
+#include <hoops_luminate_bridge/LightingEnvironment.h>
 
 #include <REDFactory.h>
 #include <REDILightShape.h>
@@ -10,13 +10,13 @@
 #include <REDITransformShape.h>
 #include <REDIShape.h>
 
-//#include <hoops_luminate_bridge/HoopsLuminateBridge.h>
-#include "LuminateRCTest.h"
+#include <hoops_luminate_bridge/HoopsLuminateBridge.h>
+#include <hoops_luminate_bridge/LuminateRCTest.h>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-namespace HC_luminate_bridge {
+namespace hoops_luminate_bridge {
     RED_RC createBackgroundCube(RED::Object* a_backgroundTexture, int a_size, RED::Object*& a_outBackgroundCubeImage)
     {
         //////////////////////////////////////////
@@ -269,7 +269,6 @@ namespace HC_luminate_bridge {
         RED::IWindow* iwindow = a_window->As<RED::IWindow>();
 
         RED::Object* vrl;
-        //RC_TEST(iwindow->GetDefaultVRL(vrl));
         RC_TEST(iwindow->GetVRL(vrl, a_num_vrl));
 
         RED::IViewpointRenderList* ivrl = vrl->As<RED::IViewpointRenderList>();
@@ -446,4 +445,4 @@ namespace HC_luminate_bridge {
 
         return RED_OK;
     }
-} // namespace HC_luminate_bridge
+} // namespace hoops_luminate_bridge

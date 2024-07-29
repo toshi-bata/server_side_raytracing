@@ -104,7 +104,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Debug-static;$(HEXCHANGE_INSTALL_DIR)\include;$(HLUMINATE_INSTALL_DIR)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Debug-static;$(HEXCHANGE_INSTALL_DIR)\include;$(HLUMINATE_INSTALL_DIR)\include;hoops_luminate_bridge\include</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
     </ClCompile>
@@ -141,7 +141,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HEXCHANGE_INSTALL_DIR)/include;$(HLUMINATE_INSTALL_DIR)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(HCOMMUNICATOR_INSTALL_DIR)\authoring\libconverter\include;$(LIBMICRO_INSTALL_DIR)\x86_64\VS2019\Release-static;$(HEXCHANGE_INSTALL_DIR)/include;$(HLUMINATE_INSTALL_DIR)\include;hoops_luminate_bridge\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -153,22 +153,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AxisTriad.cpp" />
-    <ClCompile Include="ConversionTools.cpp" />
+    <ClCompile Include="hoops_luminate_bridge\src\AxisTriad.cpp" />
+    <ClCompile Include="hoops_luminate_bridge\src\ConversionTools.cpp" />
     <ClCompile Include="ExProcess.cpp" />
-    <ClCompile Include="HCLuminateBridge.cpp" />
     <ClCompile Include="HLuminateServer.cpp" />
-    <ClCompile Include="LightingEnvironment.cpp" />
+    <ClCompile Include="hoops_luminate_bridge\src\HoopsExLuminateBridge.cpp" />
+    <ClCompile Include="hoops_luminate_bridge\src\HoopsLuminateBridge.cpp" />
+    <ClCompile Include="hoops_luminate_bridge\src\LightingEnvironment.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AxisTriad.h" />
-    <ClInclude Include="ConversionTools.h" />
+    <ClInclude Include="hoops_luminate_bridge\include\hoops_luminate_bridge\AxisTriad.h" />
+    <ClInclude Include="hoops_luminate_bridge\include\hoops_luminate_bridge\ConversionTools.h" />
     <ClInclude Include="ExProcess.h" />
-    <ClInclude Include="HCLuminateBridge.h" />
     <ClInclude Include="HLuminateServer.h" />
-    <ClInclude Include="LightingEnvironment.h" />
+    <ClInclude Include="hoops_luminate_bridge\include\hoops_luminate_bridge\HoopsExLuminateBridge.h" />
+    <ClInclude Include="hoops_luminate_bridge\include\hoops_luminate_bridge\HoopsLuminateBridge.h" />
+    <ClInclude Include="hoops_luminate_bridge\include\hoops_luminate_bridge\LightingEnvironment.h" />
     <ClInclude Include="utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

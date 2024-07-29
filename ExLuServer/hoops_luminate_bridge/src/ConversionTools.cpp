@@ -7,12 +7,12 @@
 #include <REDIREDFile.h>
 #include <REDImageTools.h>
 
-#include "LuminateRCTest.h"
-#include "ConversionTools.h"
+#include <hoops_luminate_bridge/LuminateRCTest.h>
+#include <hoops_luminate_bridge/ConversionTools.h>
 
 #define PBR_TEXTURE_SIZE 1024
 
-namespace HC_luminate_bridge {
+namespace hoops_luminate_bridge {
     RED::Object* createREDIImage2D(ImageData const& a_imageData, RED::Object* a_resourceManager)
     {
         RED::IResourceManager* iresourceManager = a_resourceManager->As<RED::IResourceManager>();
@@ -451,4 +451,4 @@ namespace HC_luminate_bridge {
         conversionOutput.normalTextureName = a_normalTextureName;
         a_ioPBRToRealisticConversionMap[a_conversionInput] = conversionOutput;
     }
-} // namespace HC_luminate_bridge
+} // namespace hoops_luminate_bridge

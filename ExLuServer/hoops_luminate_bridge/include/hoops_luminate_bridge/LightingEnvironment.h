@@ -14,7 +14,7 @@
     #endif
 #endif
 
-namespace HC_luminate_bridge {
+namespace hoops_luminate_bridge {
 
     /**
      * Structure storing data about a default lighting model.
@@ -178,6 +178,6 @@ namespace HC_luminate_bridge {
     RED_RC
     removeEnvironmentMapModel(RED::Object* a_window, const int a_num_vrl, RED::Object* a_transformShape, EnvironmentMapLightingModel const& a_model);
 
-} // namespace HC_luminate_bridge
+} // namespace hoops_luminate_bridge
 
 #endif

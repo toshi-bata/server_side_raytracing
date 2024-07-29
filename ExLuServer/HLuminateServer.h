@@ -2,10 +2,10 @@
 #include <string>
 #include <map>
 #include <windows.h>
-#include "HCLuminateBridge.h"
+#include <hoops_luminate_bridge/HoopsExLuminateBridge.h>
 #include "ExProcess.h"
 
-using namespace HC_luminate_bridge;
+using namespace hoops_luminate_bridge;
 
 class HLuminateServer
 {
@@ -16,15 +16,15 @@ public:
 private:
 	struct LuminateSession
 	{
-		HCLuminateBridge* pHCLuminateBridge = NULL;
+		HoopsLuminateBridgeEx* pHCLuminateBridge = NULL;
 		HWND hwnd;
 		std::vector<EnvironmentMapLightingModel> envMapArr;
 	};
 
 	std::map<std::string, LuminateSession> m_mHLuminateSession;
 
-	void stopFrameTracing(HCLuminateBridge* bridge);
-	bool loadLibMaterial(HCLuminateBridge* bridge, RED::String redfilename, RED::Object*& libraryMaterial);
+	void stopFrameTracing(HoopsLuminateBridge* bridge);
+	bool loadLibMaterial(HoopsLuminateBridge* bridge, RED::String redfilename, RED::Object*& libraryMaterial);
 
 public:
 	bool Init(char const* license);
