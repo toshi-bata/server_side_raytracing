@@ -27,7 +27,6 @@ private:
 	bool loadLibMaterial(HoopsLuminateBridge* bridge, RED::String redfilename, RED::Object*& libraryMaterial);
 
 public:
-	bool Init(char const* license);
 	bool Terminate();
 	bool PrepareRendering(std::string sessionId, 
 		double* target, double* up, double* position, int projection, double cameraW, double cameraH, 

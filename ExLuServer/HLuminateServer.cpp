@@ -10,6 +10,7 @@
 #include <REDIDataManager.h>
 #include <REDIMaterialController.h>
 #include <REDIMaterialControllerProperty.h>
+#include "hoops_license.h"
 
 #define RC_CHECK(rc)                                                               \
     {                                                                              \
@@ -66,45 +67,6 @@ HWND CreateWndow(const int width, const int height)
     return hwnd;
 }
 
-bool HLuminateServer::Init(char const* license)
-{
-    RED_RC rc;
-
-    //////////////////////////////////////////
-    // Get the resource manager singleton
-    //////////////////////////////////////////
-
-    RED::Object* resmgr = RED::Factory::CreateInstance(CID_REDResourceManager);
-    if (!resmgr)
-        return false;
-
-    RED::IResourceManager* iresmgr = resmgr->As< RED::IResourceManager >();
-
-    //////////////////////////////////////////
-    // Set the license and check its validity
-    //////////////////////////////////////////
-
-    RED::ILicense* ilicense = resmgr->As<RED::ILicense>();
-    if (RED_OK != ilicense->SetLicense(license))
-        return false;
-
-    bool isActivate = false;
-    rc = ilicense->IsProductActivated(isActivate, RED::PROD_REDSDK);
-    
-    if (!isActivate)
-        return false;
-
-    //////////////////////////////////////////
-    // Set tracer mode
-    //////////////////////////////////////////
-
-    RED::IOptions* ioptions = resmgr->As<RED::IOptions>();
-    if (RED_OK != ioptions->SetOptionValue(RED::OPTIONS_RAY_ENABLE_SOFT_TRACER, 1, iresmgr->GetState()))
-        return false;
-
-    return true;
-}
-
 bool HLuminateServer::Terminate()
 {
     //////////////////////////////////////////
@@ -148,7 +110,7 @@ bool HLuminateServer::PrepareRendering(std::string sessionId,
 
         lumSession.hwnd = CreateWndow(0, 0);
         std::string filepath = "";
-        lumSession.pHCLuminateBridge->initialize(lumSession.hwnd, width, height, filepath, cameraInfo);
+        lumSession.pHCLuminateBridge->initialize(HOOPS_LICENSE, lumSession.hwnd, width, height, filepath, cameraInfo);
 
         m_mHLuminateSession[sessionId] = lumSession;
     }
@@ -221,6 +183,8 @@ bool HLuminateServer::ClearSession(std::string sessionId)
                 rc = RED::Factory::DeleteInstance(lumSession.envMapArr[i].skyLight, ireamgr->GetState());
             }
         }
+
+        lumSession.pHCLuminateBridge->shutdown();
 
         delete lumSession.pHCLuminateBridge;
 

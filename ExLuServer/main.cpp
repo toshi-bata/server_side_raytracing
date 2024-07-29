@@ -15,7 +15,6 @@
 #include <string>
 #include <map>
 #include <microhttpd.h>
-#include "hoops_license.h"
 #include "utilities.h"
 #include "ExProcess.h"
 #include <windows.h>
@@ -53,6 +52,7 @@ enum ConnectionType
 static unsigned int nr_of_uploading_clients = 0;
 static ExProcess *pExProcess;
 static HLuminateServer* m_pHLuminateServer;
+static char current_sessionId[256] = { '\0' };
 
 /**
  * Information we keep per connection.
@@ -422,6 +422,22 @@ answer_to_connection(void* cls,
         con_info->sessionId = MHD_lookup_connection_value(connection, MHD_GET_ARGUMENT_KIND, "session_id");
         printf("Session ID: %s\n", con_info->sessionId);
 
+        if (strlen(current_sessionId))
+        {
+            if (0 != strcmp(current_sessionId, con_info->sessionId))
+            {
+                printf("Server is busy\n");
+
+                con_info->answerstring = response_servererror;
+                con_info->answercode = MHD_HTTP_OK;
+                return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+            }
+        }
+        else
+        {
+            strcpy(current_sessionId, con_info->sessionId);
+        }
+
         if (0 == strcasecmp(method, MHD_HTTP_METHOD_POST))
         {
             con_info->postprocessor =
@@ -533,7 +549,8 @@ answer_to_connection(void* cls,
             }
 
             // Delete Luminate session
-            m_pHLuminateServer->ClearSession(con_info->sessionId);
+            if (m_pHLuminateServer->ClearSession(con_info->sessionId))
+                printf("HOOPS Luminate is terminated.\n");
 
             // Delete texture file
             if (0 < strlen(s_floorTexturePath))
@@ -548,6 +565,8 @@ answer_to_connection(void* cls,
                 }
 #endif
             }
+
+            strcpy(current_sessionId, "");
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
@@ -680,10 +699,15 @@ answer_to_connection(void* cls,
             if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
             if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
-            m_pHLuminateServer->PrepareRendering(con_info->sessionId, 
-                target, up, position, projection, cameraW, cameraH, width, height);
+            if (m_pHLuminateServer->PrepareRendering(con_info->sessionId,
+                target, up, position, projection, cameraW, cameraH, width, height))
+            {
+                printf("HOOPS Luminate is initialized.\n");
+                con_info->answerstring = response_success;
+            }
+            else
+                con_info->answerstring = response_servererror;
 
-            con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
 
@@ -945,15 +969,6 @@ main(int argc, char** argv)
 
     // Assign Luminate license.
     m_pHLuminateServer = new HLuminateServer();
-
-    bool isActive = false;
-    if (!m_pHLuminateServer->Init(HOOPS_LICENSE))
-    {
-        printf("HOOPS Luminate initialize Failed.\n");
-        return 1;
-    }
-    
-    printf("HOOPS Luminate Initialized.\n");
 
     struct MHD_Daemon* daemon;
 

@@ -513,17 +513,17 @@ class Main {
                 // Delete model
                 this._viewer.model.switchToModel("_empty").then(() => {
                     // Reset server
-                    this._serverCaller.CallServerPost("Clear").then(() => {
+                    this._serverCaller.CallServerPost("Clear").then((res) => {
                         this._requestServerProcess();
                         // Set default opetators
                         this._setDefaultOperators();
 
-                        resolve();
+                        return resolve(res);
                     });
                 });
             }
             else {
-                resolve();
+                return resolve();
             }
         });
     }
@@ -579,7 +579,13 @@ class Main {
         const now = new Date().getTime();
         $('#backgroundImg').attr('src', 'css/images/default_background.png');
 
-        this._invokeNew().then(() => {
+        this._invokeNew().then((res) => {
+            if ("success" != res) {
+                $("#loadingImage").hide();
+                alert("Server is busy.");
+                return;
+            }
+
             this._serverCaller.CallServerPost("SetOptions", params).then(() => {
                 this._serverCaller.CallServerSubmitFile(formData).then((arr) => {
                     let dataArr = Array.from(arr);

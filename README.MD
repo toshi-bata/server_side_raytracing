@@ -55,5 +55,5 @@ ExLuServer is a server side console application which is using HOOPS Exchange, L
     Windows: `ExLuServer 8888`<br>
 5. Open the main.html with server's port number (using Chrome)<br>
     `http://localhost:8000/main.html?viewer=CSR&instance=_empty&port=8888`
-    
+Since one ExLuServer only supports one client, you need to start the ExLuServer with a different port number for each client. 
 

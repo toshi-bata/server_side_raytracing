@@ -35,23 +35,23 @@ class ServerCaller {
                     switch (retType) {
                         case "INT": {
                             let arr = new Int32Array(xhr.response);
-                            if (arr.length) resolve(arr);
+                            if (arr.length) return resolve(arr);
                             else reject();
                         } break;
                         case "FLOAT": {
                             const arr = new Float32Array(xhr.response); 
-                            if (arr.length) resolve(arr);
+                            if (arr.length) return resolve(arr);
                             else reject();
                         } break;
                         default: {
-                            if ("OK" == xhr.statusText) resolve();
-                            else reject();
+                            if ("OK" == xhr.statusText) return resolve(xhr.response);
+                            else return reject();
                         } break;
                     }
                 }
             }
             xhr.onerror = () => {
-                reject(xhr.statusText);
+                return reject(xhr.statusText);
             };
 
             xhr.send(encParams);

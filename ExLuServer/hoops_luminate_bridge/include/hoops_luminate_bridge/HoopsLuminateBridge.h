@@ -178,7 +178,7 @@ namespace hoops_luminate_bridge {
          *                                     If empty, a sun/sky lighting environment will be used instead.
          * @return True if success, otherwise False.
          */
-        bool initialize(/*std::string const& a_license,*/
+        bool initialize(std::string const& a_license,
                         void* a_osHandle,
                         int a_windowWidth,
                         int a_windowHeight,
