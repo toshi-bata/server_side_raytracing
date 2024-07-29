@@ -125,10 +125,6 @@ void ExProcess::Terminate()
 
 void ExProcess::SetOptions()
 {
-    m_bAddEntityIds = false;
-    m_bSewModel = false;
-    m_dSewingTol = 0.1;
-
     // Init import options
     A3D_INITIALIZE_DATA(A3DRWParamsLoadData, m_sLoadData);
     m_sLoadData.m_sGeneral.m_bReadSolids = true;
@@ -182,14 +178,6 @@ std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_
     }
     printf("Model was loaded\n");
     m_mModelFile.insert(std::make_pair(session_id, pModelFile));
-
-    // Sewing
-    if (m_bSewModel)
-    {
-        A3DSewOptionsData sewOption;
-        A3D_INITIALIZE_DATA(A3DSewOptionsData, sewOption);
-        iRet = A3DAsmModelFileSew(&pModelFile, m_dSewingTol, &sewOption);
-    }
 
     // HC libconverter
     if (!m_libImporter.Load(pModelFile))

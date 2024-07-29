@@ -28,9 +28,6 @@ private:
     A3DRWParamsLoadData m_sLoadData;
 	Converter m_libConverter;
 	Importer m_libImporter; // Import Initialization
-	bool m_bAddEntityIds;
-	bool m_bSewModel;
-	double m_dSewingTol;
 	std::vector<MeshPropaties> m_aMeshProps;
 	
 	void traverseTree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, A3DMiscCascadedAttributes* pParentAttr);
