@@ -730,19 +730,11 @@ answer_to_connection(void* cls,
             if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
             if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
-            std::vector<MeshPropaties> aMeshProps = pExProcess->GetModelMesh(con_info->sessionId);
+            A3DAsmModelFile* pModelFile = pExProcess->GetModelFile(con_info->sessionId);
 
             m_pHLuminateServer->StartRendering(con_info->sessionId, 
                 target, up, position, projection, cameraW, cameraH, 
-                width, height, aMeshProps);
-
-            // Delete mesh properties
-            for (auto it = aMeshProps.begin(); it != aMeshProps.end(); ++it)
-            {
-                A3DTreeNodeGetName(nullptr, &it->name);
-                A3DRiComputeMesh(nullptr, nullptr, &it->meshData, nullptr);
-            }
-            std::vector<MeshPropaties>().swap(aMeshProps);
+                width, height, pModelFile);
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;

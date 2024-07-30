@@ -129,7 +129,7 @@ bool HLuminateServer::PrepareRendering(std::string sessionId,
 
 bool HLuminateServer::StartRendering(std::string sessionId,
     double* target, double* up, double* position, int projection, double cameraW, double cameraH,
-    int width, int height, std::vector<MeshPropaties> aMeshProps)
+    int width, int height, A3DAsmModelFile* pModelFile)
 {
     if (m_mHLuminateSession.count(sessionId))
     {
@@ -137,7 +137,7 @@ bool HLuminateServer::StartRendering(std::string sessionId,
 
         CameraInfo cameraInfo = lumSession.pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
-        lumSession.pHCLuminateBridge->setMeshProps(aMeshProps);
+        lumSession.pHCLuminateBridge->setModelFile(pModelFile);
         
         lumSession.pHCLuminateBridge->syncScene(width, height, cameraInfo);
 

@@ -6,58 +6,6 @@
 
 static double s_dUnit = 1.0;
 
-A3DVector3dData cross_product(const A3DVector3dData& X, const A3DVector3dData& Y)
-{
-    A3DVector3dData Z;
-    Z.m_dX = X.m_dY * Y.m_dZ - X.m_dZ * Y.m_dY;
-    Z.m_dY = X.m_dZ * Y.m_dX - X.m_dX * Y.m_dZ;
-    Z.m_dZ = X.m_dX * Y.m_dY - X.m_dY * Y.m_dX;
-    return Z;
-}
-
-int get_matrix(const A3DMiscTransformation* transfo, double* matrix)
-{
-    A3DEEntityType type = kA3DTypeUnknown;
-    A3DEntityGetType(transfo, &type);
-    if (type == kA3DTypeMiscCartesianTransformation)
-    {
-        A3DMiscCartesianTransformationData data;
-        A3D_INITIALIZE_DATA(A3DMiscCartesianTransformationData, data);
-
-        if (A3DMiscCartesianTransformationGet(transfo, &data))
-            return 1;
-        const auto sZVector = cross_product(data.m_sXVector, data.m_sYVector);
-        const double dMirror = (data.m_ucBehaviour & kA3DTransformationMirror) ? -1. : 1.;
-        matrix[12] = data.m_sOrigin.m_dX * s_dUnit;
-        matrix[13] = data.m_sOrigin.m_dY * s_dUnit;
-        matrix[14] = data.m_sOrigin.m_dZ * s_dUnit;
-        matrix[15] = 1.;
-
-        matrix[0] = data.m_sXVector.m_dX * data.m_sScale.m_dX * s_dUnit;
-        matrix[1] = data.m_sXVector.m_dY * data.m_sScale.m_dX * s_dUnit;
-        matrix[2] = data.m_sXVector.m_dZ * data.m_sScale.m_dX * s_dUnit;
-        matrix[3] = 0.;
-
-        matrix[4] = data.m_sYVector.m_dX * data.m_sScale.m_dY * s_dUnit;
-        matrix[5] = data.m_sYVector.m_dY * data.m_sScale.m_dY * s_dUnit;
-        matrix[6] = data.m_sYVector.m_dZ * data.m_sScale.m_dY * s_dUnit;
-        matrix[7] = 0.;
-
-        matrix[8] = dMirror * sZVector.m_dX * data.m_sScale.m_dZ * s_dUnit;
-        matrix[9] = dMirror * sZVector.m_dY * data.m_sScale.m_dZ * s_dUnit;
-        matrix[10] = dMirror * sZVector.m_dZ * data.m_sScale.m_dZ * s_dUnit;
-        matrix[11] = 0.;
-
-        if (A3DMiscCartesianTransformationGet(nullptr, &data))
-            return 1;
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
-}
-
 ExProcess::ExProcess()
 {
 }
@@ -229,116 +177,10 @@ std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_
     return floatArray;
 }
 
-void ExProcess::traverseTree(A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, A3DMiscCascadedAttributes* pParentAttr)
+A3DAsmModelFile* ExProcess::GetModelFile(const char* session_id)
 {
-    A3DStatus iRet;
-
-    // Get node net matrix
-    A3DMiscTransformation* transf;
-    iRet = A3DTreeNodeGetNetTransformation(hnd_node, &transf);
-    
-    double matrix[] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
-    get_matrix(transf, matrix);
-
-    // Get node net attribute
-    A3DGraphStyleData styleData;
-    A3D_INITIALIZE_DATA(A3DGraphStyleData, styleData);
-    iRet = A3DTreeNodeGetNetStyle(hnd_node, &styleData);
-
-    A3DEntity* pEntity = nullptr;
-    A3DTreeNodeGetEntity(hnd_node, &pEntity);
-
-    A3DEEntityType eType = kA3DTypeUnknown;
-    if (A3D_SUCCESS == A3DEntityGetType(pEntity, &eType))
-    {
-        A3DMiscCascadedAttributes* pAttr = nullptr;
-
-        const A3DUTF8Char* pTypeMsg = A3DMiscGetEntityTypeMsg(eType);
-
-        if (0 == strcmp(pTypeMsg, "kA3DTypeAsmProductOccurrence"))
-        {
-            iRet = A3DMiscCascadedAttributesCreate(&pAttr);
-            iRet = A3DMiscCascadedAttributesPush(pAttr, pEntity, pParentAttr);
-        }
-        else if (0 == strcmp(pTypeMsg, "kA3DTypeRiBrepModel") || 0 == strcmp(pTypeMsg, "kA3DTypeRiPolyBrepModel"))
-        {
-            // Get node mesh
-            A3DMeshData mesh_data;
-            A3D_INITIALIZE_DATA(A3DMeshData, mesh_data);
-            if (A3D_SUCCESS != A3DRiComputeMesh(pEntity, pParentAttr, &mesh_data, nullptr))
-                return;
-
-            if (0 == mesh_data.m_uiCoordSize || 0 == mesh_data.m_uiFaceSize)
-                return;
-
-            MeshPropaties meshProps;
-            meshProps.meshData = mesh_data;
-
-            // Get parent node name
-            A3DTreeNode* parent_node;
-            A3DTreeNodeGetParent(hnd_tree, hnd_node, &parent_node);
-
-            A3DUTF8Char* parent_name = nullptr;
-            if (A3D_SUCCESS != A3DTreeNodeGetName(parent_node, &parent_name))
-                parent_name = nullptr;
-
-            meshProps.name = parent_name;
-
-            std::copy(std::begin(matrix), std::end(matrix), std::begin(meshProps.matrix));
-
-            A3DUns32 uiColorIndex = styleData.m_uiRgbColorIndex;
-            if (A3D_DEFAULT_STYLE_INDEX != uiColorIndex)
-            {
-                A3D_INITIALIZE_DATA(A3DGraphRgbColorData, meshProps.color);
-                A3DGlobalGetGraphRgbColorData(uiColorIndex, &meshProps.color);
-            }
-
-            m_aMeshProps.push_back(meshProps);
-        }
-
-        // Get child nodes
-        A3DUns32 n_child_nodes = 0;
-        A3DTreeNode** child_nodes = nullptr;
-        iRet = A3DTreeNodeGetChildren(hnd_tree, hnd_node, &n_child_nodes, &child_nodes);
-
-        for (A3DUns32 n = 0; n < n_child_nodes; ++n)
-        {
-            traverseTree(hnd_tree, child_nodes[n], pAttr);
-        }
-        A3DTreeNodeGetChildren(0, 0, &n_child_nodes, &child_nodes);
-    }
-}
-
-std::vector<MeshPropaties> ExProcess::GetModelMesh(const char* session_id)
-{
-    A3DStatus iRet;
-
-    m_aMeshProps.clear();
-
     if (0 == m_mModelFile.count(session_id))
-        return m_aMeshProps;
+        return nullptr;
 
-    A3DAsmModelFile* pModelFile = m_mModelFile[session_id];
-
-    // Get unit
-    A3DAsmModelFileData sData;
-    A3D_INITIALIZE_DATA(A3DAsmModelFileData, sData);
-    A3DAsmModelFileGet(pModelFile, &sData);
-    s_dUnit = sData.m_dUnit;
-
-    // Traverse model
-    A3DTree* tree = 0;
-    iRet = A3DTreeCompute(pModelFile, &tree, 0);
-
-    A3DTreeNode* root_node = 0;
-    iRet = A3DTreeGetRootNode(tree, &root_node);
-
-    A3DMiscCascadedAttributes* pAttr;
-    A3DMiscCascadedAttributesCreate(&pAttr);
-
-    traverseTree(tree, root_node, pAttr);
-
-    iRet = A3DTreeCompute(nullptr, &tree, nullptr);
-
-    return m_aMeshProps;
+    return m_mModelFile[session_id];
 }

@@ -435,7 +435,7 @@ namespace hoops_luminate_bridge {
      * @param[in] a_windowHeight New height to set.
      * @return RED_OK if success, otherwise error code.
      */
-    RED_RC resizeWindow(RED::Object* a_window, int a_newWidth, int a_newHeight);
+    RED_RC resizeWindow(RED::Object* a_window, int a_newWidth, int a_newHeight, int a_vrlId);
 
     /**
      * Add a scene to a camera.

@@ -40,5 +40,6 @@ public:
 	void DeleteModelFile(const char* session_id);
 	std::vector<float> LoadFile(const char* session_id, const char* file_name, const char* sc_name);
 	std::vector<MeshPropaties> GetModelMesh(const char* session_id);
+	A3DAsmModelFile* GetModelFile(const char* session_id);
 };
 

@@ -3,7 +3,7 @@
 
 #include "HoopsLuminateBridge.h"
 #include "ConversionTools.h"
-#include "..\..\ExProcess.h"
+#include <A3DSDKIncludes.h>
 
 namespace hoops_luminate_bridge {
 	/**
@@ -34,7 +34,7 @@ namespace hoops_luminate_bridge {
 		~HoopsLuminateBridgeEx();
 
 	private:
-		std::vector<MeshPropaties> m_aMeshProps;
+		A3DAsmModelFile* m_pModelFile;
 
 		// Floor UV param
 		std::vector<float> m_floorUVArr;
@@ -51,7 +51,7 @@ namespace hoops_luminate_bridge {
 		RED_RC syncRootTransform() override;
 
 	public:
-		void setMeshProps(std::vector<MeshPropaties> aMeshProps) { m_aMeshProps = aMeshProps; }
+		void setModelFile(A3DAsmModelFile* pModelFile) { m_pModelFile = pModelFile; }
 		bool addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs);
 		bool deleteFloorMesh();
 		bool updateFloorMaterial(const double* color, const char* texturePath, const double uvScale = 0.0);
@@ -59,15 +59,12 @@ namespace hoops_luminate_bridge {
 
 	};
 
-	LuminateSceneInfoPtr convertExSceneToLuminate(std::vector<MeshPropaties> aMeshProps);
-	RED::Object* convertNordTree(RED::Object* a_resourceManager, ConversionContextNode& a_ioConversionContext, MeshPropaties meshProps);
-	RealisticMaterialInfo getSegmentMaterialInfo(MeshPropaties meshProps,
+	LuminateSceneInfoPtr convertExSceneToLuminate(A3DAsmModelFile* pModelFile);
+	RealisticMaterialInfo getSegmentMaterialInfo(A3DGraphRgbColorData a_sColor,
 		RED::Object* a_resourceManager,
 		RealisticMaterialInfo const& a_baseMaterialInfo,
 		ImageNameToLuminateMap& a_ioImageNameToLuminateMap,
 		TextureNameImageNameMap& a_ioTextureNameImageNameMap,
 		PBRToRealisticConversionMap& a_ioPBRToRealisticConversionMap);
-	RED::Object* convertExMeshToREDMeshShape(const RED::State& a_state, A3DMeshData a_meshData);
-
 }
 #endif

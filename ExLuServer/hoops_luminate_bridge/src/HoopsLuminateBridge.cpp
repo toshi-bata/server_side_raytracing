@@ -127,7 +127,7 @@ namespace hoops_luminate_bridge {
 #ifdef _LIN32
         rc = createRedWindow(a_osHandle, m_windowWidth, m_windowHeight, a_display, a_screen, a_visual, m_window);
 #else
-        rc = createRedWindow(a_osHandle, m_windowWidth, m_windowHeight, m_window);
+        rc = createRedWindow(a_osHandle, 600, 400, m_window);
 #endif
 
         if (rc != RED_OK)
@@ -281,7 +281,7 @@ namespace hoops_luminate_bridge {
         // Resize Luminate window.
         //////////////////////////////////////////
 
-        RED_RC rc = resizeWindow(m_window, a_windowWidth, a_windowHeight);
+        RED_RC rc = resizeWindow(m_window, a_windowWidth, a_windowHeight, 1);
         if (rc != RED_OK)
             return false;
 
@@ -445,19 +445,16 @@ namespace hoops_luminate_bridge {
         Handedness viewHandedness =
             m_conversionDataPtr != nullptr ? m_conversionDataPtr->viewHandedness : Handedness::RightHanded;
 
-        int windowWidth, windowHeight;
-
         RED::IWindow* iwindow = m_window->As<RED::IWindow>();
         RED::Object* auxvrl = NULL;
         RC_TEST(iwindow->GetVRL(auxvrl, 1));
 
         RED::IViewpointRenderList* iauxvrl = auxvrl->As<RED::IViewpointRenderList>();
-        iauxvrl->GetSize(windowWidth, windowHeight);
 
         RED::Object* viewpoint;
         RC_TEST(iauxvrl->GetViewpoint(viewpoint, 0));
 
-        RED_RC rc = syncCameras(m_camera, viewHandedness, windowWidth, windowHeight, a_cameraInfo);
+        RED_RC rc = syncCameras(m_camera, viewHandedness, m_windowWidth, m_windowHeight, a_cameraInfo);
 
         if (rc != RED_OK)
             return rc;
@@ -949,7 +946,7 @@ namespace hoops_luminate_bridge {
         return RED_OK;
     }
 
-    RED_RC resizeWindow(RED::Object* a_window, int a_newWidth, int a_newHeight)
+    RED_RC resizeWindow(RED::Object* a_window, int a_newWidth, int a_newHeight, int a_vrlId)
     {
         // Disable resize if newWidth or newHeight == 0
         if (a_newWidth == 0 || a_newHeight == 0)
@@ -967,7 +964,13 @@ namespace hoops_luminate_bridge {
         //////////////////////////////////////////
 
         RED::IWindow* iwindow = a_window->As<RED::IWindow>();
-        RC_TEST(iwindow->Resize(a_newWidth, a_newHeight, iresourceManager->GetState()));
+       // RC_TEST(iwindow->Resize(a_newWidth, a_newHeight, iresourceManager->GetState()));
+
+        RED::Object* auxVRLObj = NULL;
+        RC_TEST(iwindow->GetVRL(auxVRLObj, a_vrlId));
+
+        RED::IViewpointRenderList* iauxvrl = auxVRLObj->As<RED::IViewpointRenderList>();
+        RC_TEST(iauxvrl->SetSize(a_newWidth, a_newHeight, iresourceManager->GetState()));
 
         return RED_OK;
     }
