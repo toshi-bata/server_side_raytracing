@@ -33,7 +33,7 @@ public:
 		int width, int height);
 	bool StartRendering(std::string sessionId,
 		double* target, double* up, double* position, int projection, double cameraW, double cameraH,
-		int width, int height, A3DAsmModelFile* pModelFile);
+		int width, int height, A3DAsmModelFile* pModelFile, A3DEntity* pPrcIdMap);
 	std::vector<float> Draw(std::string sessionId, char* filePath);
 	bool ClearSession(std::string sessionId);
 	bool LoadEnvMapFile(std::string sessionId, const char* filePath, const char* thumbnailPath);

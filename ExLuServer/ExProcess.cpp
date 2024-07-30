@@ -1,3 +1,4 @@
+#define HOOPS_PRODUCT_PUBLISH_ADVANCED
 #define INITIALIZE_A3D_API
 #include "ExProcess.h"
 
@@ -103,7 +104,9 @@ void ExProcess::DeleteModelFile(const char* session_id)
         A3DAsmModelFile* pModelFile = m_mModelFile[session_id];
         m_mModelFile.erase(session_id);
 
-        A3DStatus iRet = A3DAsmModelFileDelete(pModelFile);
+        A3DStatus iRet = A3DPrcIdMapCreate(pModelFile, 0);
+
+        iRet = A3DAsmModelFileDelete(pModelFile);
         if (iRet == A3D_SUCCESS)
             printf("ModelFile was removed.\n");
     }
@@ -127,6 +130,13 @@ std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_
     printf("Model was loaded\n");
     m_mModelFile.insert(std::make_pair(session_id, pModelFile));
 
+    A3DPrcIdMap* pMap = nullptr;
+    iRet = A3DPrcIdMapCreate(pModelFile, &pMap);
+    if (A3D_SUCCESS != iRet || nullptr == pMap)
+        return floatArray;
+
+    m_mPrcIdMap.insert(std::make_pair(session_id, pMap));
+
     // HC libconverter
     if (!m_libImporter.Load(pModelFile))
         return floatArray;
@@ -138,6 +148,7 @@ std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_
     SC_Export_Options exportOptions; // Export Stream Cache Model
     exportOptions.sc_create_scz = true;
     exportOptions.export_attributes = true;
+    exportOptions.export_exchange_ids = true;
 
     if (!exporter.WriteSC(sc_name, nullptr, exportOptions))
         return floatArray;
@@ -177,10 +188,12 @@ std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_
     return floatArray;
 }
 
-A3DAsmModelFile* ExProcess::GetModelFile(const char* session_id)
+A3DAsmModelFile* ExProcess::GetModelFile(const char* session_id, A3DEntity*& pPrcIdMap)
 {
-    if (0 == m_mModelFile.count(session_id))
+    if (0 == m_mModelFile.count(session_id) || 0 == m_mPrcIdMap.count(session_id))
         return nullptr;
+
+    pPrcIdMap = m_mPrcIdMap[session_id];
 
     return m_mModelFile[session_id];
 }

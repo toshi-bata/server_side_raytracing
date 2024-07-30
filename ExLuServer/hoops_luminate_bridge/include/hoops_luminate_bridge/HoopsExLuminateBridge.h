@@ -35,6 +35,7 @@ namespace hoops_luminate_bridge {
 
 	private:
 		A3DAsmModelFile* m_pModelFile;
+		A3DEntity* m_pPrcIdMap;
 
 		// Floor UV param
 		std::vector<float> m_floorUVArr;
@@ -51,7 +52,7 @@ namespace hoops_luminate_bridge {
 		RED_RC syncRootTransform() override;
 
 	public:
-		void setModelFile(A3DAsmModelFile* pModelFile) { m_pModelFile = pModelFile; }
+		void setModelFile(A3DAsmModelFile* pModelFile, A3DEntity* pPrcIdMap) { m_pModelFile = pModelFile; m_pPrcIdMap = pPrcIdMap; }
 		bool addFloorMesh(const int pointCnt, const double* points, const int faceCnt, const int* faceList, const double* uvs);
 		bool deleteFloorMesh();
 		bool updateFloorMaterial(const double* color, const char* texturePath, const double uvScale = 0.0);
@@ -59,7 +60,7 @@ namespace hoops_luminate_bridge {
 
 	};
 
-	LuminateSceneInfoPtr convertExSceneToLuminate(A3DAsmModelFile* pModelFile);
+	LuminateSceneInfoPtr convertExSceneToLuminate(A3DAsmModelFile* pModelFile, A3DEntity* pPrcIdMap);
 	RealisticMaterialInfo getSegmentMaterialInfo(A3DGraphRgbColorData a_sColor,
 		RED::Object* a_resourceManager,
 		RealisticMaterialInfo const& a_baseMaterialInfo,

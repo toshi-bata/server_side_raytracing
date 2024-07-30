@@ -730,11 +730,12 @@ answer_to_connection(void* cls,
             if (!paramStrToDbl("cameraW", cameraW)) return MHD_NO;
             if (!paramStrToDbl("cameraH", cameraH)) return MHD_NO;
 
-            A3DAsmModelFile* pModelFile = pExProcess->GetModelFile(con_info->sessionId);
+            A3DEntity* pPrcIdMap;
+            A3DAsmModelFile* pModelFile = pExProcess->GetModelFile(con_info->sessionId, pPrcIdMap);
 
             m_pHLuminateServer->StartRendering(con_info->sessionId, 
                 target, up, position, projection, cameraW, cameraH, 
-                width, height, pModelFile);
+                width, height, pModelFile, pPrcIdMap);
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;

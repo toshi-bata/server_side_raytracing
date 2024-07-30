@@ -1,3 +1,4 @@
+#define HOOPS_PRODUCT_PUBLISH_ADVANCED
 #include <hoops_luminate_bridge/HoopsExLuminateBridge.h>
 #include <REDFactory.h>
 #include <REDITransformShape.h>
@@ -21,9 +22,9 @@ namespace hoops_luminate_bridge {
 
 	}
 
-    void HoopsLuminateBridgeEx::saveCameraState() { /*m_viewSK.ShowCamera(m_hpsCamera);*/ }
+    void HoopsLuminateBridgeEx::saveCameraState() {  }
 
-    LuminateSceneInfoPtr HoopsLuminateBridgeEx::convertScene() { return convertExSceneToLuminate(m_pModelFile); }
+    LuminateSceneInfoPtr HoopsLuminateBridgeEx::convertScene() { return convertExSceneToLuminate(m_pModelFile, m_pPrcIdMap); }
 
     bool HoopsLuminateBridgeEx::checkCameraChange()
     {
@@ -31,12 +32,12 @@ namespace hoops_luminate_bridge {
         //m_viewSK.ShowCamera(camera);
 
         //bool hasChanged = m_hpsCamera != camera;
+        bool hasChanged = false;
 
         //if (hasChanged)
         //    m_hpsCamera = camera;
 
-        //return hasChanged;
-        return false;
+        return hasChanged;
     }
 
     CameraInfo HoopsLuminateBridgeEx::getCameraInfo() { CameraInfo cameraInfo; return cameraInfo;/*return getHPSCameraInfo(m_viewSK);*/ }
@@ -361,6 +362,62 @@ namespace hoops_luminate_bridge {
         }
     }
 
+    RealisticMaterialInfo getSegmentMaterialInfo(A3DGraphRgbColorData a_sColor,
+        RED::Object* a_resourceManager,
+        RealisticMaterialInfo const& a_baseMaterialInfo,
+        ImageNameToLuminateMap& a_ioImageNameToLuminateMap,
+        TextureNameImageNameMap& a_ioTextureNameImageNameMap,
+        PBRToRealisticConversionMap& a_ioPBRToRealisticConversionMap)
+    {
+        RealisticMaterialInfo materialInfo = a_baseMaterialInfo;
+        RED::Object* redImage;
+
+        if (1)
+        {
+            std::string textureName;
+
+            // Determine diffuse color.
+            materialInfo.colorsByChannel[ColorChannels::DiffuseColor] = RED::Color(float(a_sColor.m_dRed), float(a_sColor.m_dGreen), float(a_sColor.m_dBlue), 1.f);
+            textureName = "";
+
+            // Determine transmission color.
+            // Note that HPS transparency is determined by diffuse color alpha and the transmission channel
+            // is for greyscale opacity texture. The transmission concept is not the same than in Luminate.
+
+            RED::Color diffuseColor = materialInfo.colorsByChannel[ColorChannels::DiffuseColor];
+            if (diffuseColor.A() != 1.0f) {
+                float alpha = diffuseColor.A();
+                materialInfo.colorsByChannel[ColorChannels::TransmissionColor] = RED::Color(1.0f - alpha);
+            }
+
+            // Retrieve the segment diffuse texture name if it exists
+            //if (getFacesTexture(a_segmentKeyPath,
+            //    HPS::Material::Channel::DiffuseTexture,
+            //    materialInfo.textureNameByChannel[TextureChannels::DiffuseTexture])) {
+            //    registerTexture(a_segmentKeyPath,
+            //        materialInfo.textureNameByChannel[TextureChannels::DiffuseTexture].textureName,
+            //        a_resourceManager,
+            //        a_ioImageNameToLuminateMap,
+            //        a_ioTextureNameImageNameMap,
+            //        redImage);
+            //}
+
+            // Determine bump map
+            //if (getFacesTexture(a_segmentKeyPath,
+            //    HPS::Material::Channel::Bump,
+            //    materialInfo.textureNameByChannel[TextureChannels::BumpTexture])) {
+            //    registerTexture(a_segmentKeyPath,
+            //        materialInfo.textureNameByChannel[TextureChannels::BumpTexture].textureName,
+            //        a_resourceManager,
+            //        a_ioImageNameToLuminateMap,
+            //        a_ioTextureNameImageNameMap,
+            //        redImage);
+            //}
+        }
+
+        return materialInfo;
+    }
+
     RED::Object* convertExMeshToREDMeshShape(const RED::State& a_state, A3DMeshData a_meshData)
     {
         RED_RC rc;
@@ -408,7 +465,7 @@ namespace hoops_luminate_bridge {
     }
 
     void traverseTreeNode(RED::Object* a_resmgr, ConversionContextNode& a_ioConversionContext, 
-        A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, A3DMiscCascadedAttributes* pParentAttr, RED::Object* modelTransformShape)
+        A3DTree* const hnd_tree, A3DTreeNode* const hnd_node, A3DMiscCascadedAttributes* pParentAttr, A3DPrcIdMap* a_pMap, RED::Object* modelTransformShape)
     {
         RED_RC rc;
         RED::IResourceManager* iresmgr = a_resmgr->As<RED::IResourceManager>();
@@ -453,13 +510,15 @@ namespace hoops_luminate_bridge {
                 if (0 == meshData.m_uiCoordSize || 0 == meshData.m_uiFaceSize)
                     return;
 
-                // Get parent node name
+                // Get PRC ID
                 A3DTreeNode* parent_node;
                 A3DTreeNodeGetParent(hnd_tree, hnd_node, &parent_node);
 
-                A3DUTF8Char* parent_name = nullptr;
-                if (A3D_SUCCESS != A3DTreeNodeGetName(parent_node, &parent_name))
-                    parent_name = nullptr;
+                A3DEntity* pParentEntity = nullptr;
+                A3DTreeNodeGetEntity(parent_node, &pParentEntity);
+
+                A3DPrcId prcId;
+                iRet = A3DPrcIdMapFindId(a_pMap, pEntity, pParentEntity, &prcId);
 
                 A3DGraphRgbColorData sColor;
                 A3DUns32 uiColorIndex = styleData.m_uiRgbColorIndex;
@@ -504,13 +563,13 @@ namespace hoops_luminate_bridge {
                 RED::ITransformShape* itransform = transform->As<RED::ITransformShape>();
 
                 // Register transform shape associated to the segment.
-                a_ioConversionContext.segmentTransformShapeMap[parent_name] = transform;
+                a_ioConversionContext.segmentTransformShapeMap[prcId] = transform;
 
                 // DiffuseColor color.
                 RED::Color deffuseColor = RED::Color(float(sColor.m_dRed), float(sColor.m_dGreen), float(sColor.m_dBlue), 1.f);
-                a_ioConversionContext.nodeDiffuseColorMap[parent_name] = deffuseColor;
+                a_ioConversionContext.nodeDiffuseColorMap[prcId] = deffuseColor;
 
-                transform->SetID(parent_name);
+                transform->SetID(prcId);
 
                 // Apply transform matrix.
                 RC_CHECK(itransform->SetMatrix(&redMatrix, iresmgr->GetState()));
@@ -525,8 +584,9 @@ namespace hoops_luminate_bridge {
 
                 iModelTransform->AddChild(transform, RED_SHP_DAG_NO_UPDATE, iresmgr->GetState());
 
-                A3DTreeNodeGetName(nullptr, &parent_name);
                 A3DRiComputeMesh(nullptr, nullptr, &meshData, nullptr);
+                A3DTreeNodeGetEntity(nullptr, &pParentEntity);
+                A3DTreeNodeGetParent(nullptr, nullptr, &parent_node);
 
             }
 
@@ -537,13 +597,13 @@ namespace hoops_luminate_bridge {
 
             for (A3DUns32 n = 0; n < n_child_nodes; ++n)
             {
-                traverseTreeNode(a_resmgr, a_ioConversionContext, hnd_tree, child_nodes[n], pAttr, modelTransformShape);
+                traverseTreeNode(a_resmgr, a_ioConversionContext, hnd_tree, child_nodes[n], pAttr, a_pMap, modelTransformShape);
             }
             A3DTreeNodeGetChildren(0, 0, &n_child_nodes, &child_nodes);
         }
     }
 
-    LuminateSceneInfoPtr convertExSceneToLuminate(A3DAsmModelFile* pModelFile)
+    LuminateSceneInfoPtr convertExSceneToLuminate(A3DAsmModelFile* pModelFile, A3DEntity* pMap)
     {
         //////////////////////////////////////////
         // Get the resource manager singleton.
@@ -614,68 +674,12 @@ namespace hoops_luminate_bridge {
 
         A3DMiscCascadedAttributes* pAttr;
         A3DMiscCascadedAttributesCreate(&pAttr);
-
-        traverseTreeNode(resourceManager, *sceneInfoPtr, tree, root_node, pAttr, modelTransformShape);
+        
+        traverseTreeNode(resourceManager, *sceneInfoPtr, tree, root_node, pAttr, (A3DPrcIdMap*)pMap, modelTransformShape);
 
         iRet = A3DTreeCompute(nullptr, &tree, nullptr);
 
         return sceneInfoPtr;
-    }
-
-    RealisticMaterialInfo getSegmentMaterialInfo(A3DGraphRgbColorData a_sColor,
-        RED::Object* a_resourceManager,
-        RealisticMaterialInfo const& a_baseMaterialInfo,
-        ImageNameToLuminateMap& a_ioImageNameToLuminateMap,
-        TextureNameImageNameMap& a_ioTextureNameImageNameMap,
-        PBRToRealisticConversionMap& a_ioPBRToRealisticConversionMap)
-    {
-        RealisticMaterialInfo materialInfo = a_baseMaterialInfo;
-        RED::Object* redImage;
-
-        if (1)
-        {
-            std::string textureName;
-
-            // Determine diffuse color.
-            materialInfo.colorsByChannel[ColorChannels::DiffuseColor] = RED::Color(float(a_sColor.m_dRed), float(a_sColor.m_dGreen), float(a_sColor.m_dBlue), 1.f);
-            textureName = "";
-
-            // Determine transmission color.
-            // Note that HPS transparency is determined by diffuse color alpha and the transmission channel
-            // is for greyscale opacity texture. The transmission concept is not the same than in Luminate.
-
-            RED::Color diffuseColor = materialInfo.colorsByChannel[ColorChannels::DiffuseColor];
-            if (diffuseColor.A() != 1.0f) {
-                float alpha = diffuseColor.A();
-                materialInfo.colorsByChannel[ColorChannels::TransmissionColor] = RED::Color(1.0f - alpha);
-            }
-
-            // Retrieve the segment diffuse texture name if it exists
-            //if (getFacesTexture(a_segmentKeyPath,
-            //    HPS::Material::Channel::DiffuseTexture,
-            //    materialInfo.textureNameByChannel[TextureChannels::DiffuseTexture])) {
-            //    registerTexture(a_segmentKeyPath,
-            //        materialInfo.textureNameByChannel[TextureChannels::DiffuseTexture].textureName,
-            //        a_resourceManager,
-            //        a_ioImageNameToLuminateMap,
-            //        a_ioTextureNameImageNameMap,
-            //        redImage);
-            //}
-
-            // Determine bump map
-            //if (getFacesTexture(a_segmentKeyPath,
-            //    HPS::Material::Channel::Bump,
-            //    materialInfo.textureNameByChannel[TextureChannels::BumpTexture])) {
-            //    registerTexture(a_segmentKeyPath,
-            //        materialInfo.textureNameByChannel[TextureChannels::BumpTexture].textureName,
-            //        a_resourceManager,
-            //        a_ioImageNameToLuminateMap,
-            //        a_ioTextureNameImageNameMap,
-            //        redImage);
-            //}
-        }
-
-        return materialInfo;
     }
 
 }
