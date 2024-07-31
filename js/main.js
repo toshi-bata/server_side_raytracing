@@ -574,51 +574,30 @@ class Main {
         $(`.itemList_thumbnail:nth-child(${this._currentMaterialId})` + '.lightingItem').addClass('thumbnail-selected')
     }
 
-    _loadModel(params, formData, scModelName) {
+    async _loadModel(params, formData, scModelName) {
         $("#loadingImage").show();
         const now = new Date().getTime();
         $('#backgroundImg').attr('src', 'css/images/default_background.png');
 
-        this._invokeNew().then((res) => {
-            if ("success" != res) {
-                $("#loadingImage").hide();
-                alert("Server is busy.");
-                return;
-            }
+        const res = await this._invokeNew();
+        if ("success" != res) {
+            $("#loadingImage").hide();
+            alert("Server is busy.");
+            return;
+        }
 
-            this._serverCaller.CallServerPost("SetOptions", params).then(() => {
-                this._serverCaller.CallServerSubmitFile(formData).then((arr) => {
-                    let dataArr = Array.from(arr);
-                    let unit = dataArr.shift();
-                    unit = unit.toFixed(1);
-                    unit = this._units[unit];
-                    const area = dataArr.shift();
-                    const volume = dataArr.shift();
-                    const COG = [dataArr.shift(), dataArr.shift(), dataArr.shift()];
-                    const BB = [dataArr.shift(), dataArr.shift(), dataArr.shift()];
+        await this._serverCaller.CallServerPost("SetOptions", params);
+        const arr = await this._serverCaller.CallServerSubmitFile(formData);
+        if (0 == arr[0]) return;
 
-                    const partProps = '<ul><li>Unit: ' + unit + '</li>'
-                    + '<li>Surface area: ' + area.toFixed(2) + '<br>'
-                    + '<li>Volume: ' + volume.toFixed(2) + '</li>'
-                    + '<li>Center of Gravity: X= ' + COG[0].toFixed(2) + ', Y= ' + COG[1].toFixed(2) + ', Z= ' + COG[2].toFixed(2) + '</li>'
-                    + '<li>Bounding box: X= ' + BB[0].toFixed(2) + ', Y= ' + BB[1].toFixed(2) + ', Z= ' + BB[2].toFixed(2) + '</li></ul>'
+        const nodes = await this._viewer.model.switchToModel(this._sessionId + "/" + scModelName);
+        const camera = this._viewer.view.getCamera();
+        camera.setProjection(Communicator.Projection.Perspective);
+        this._viewer.view.setCamera(camera);
 
-                    $("#dataInfo").html(partProps);
-
-                    this._viewer.model.switchToModel(this._sessionId + "/" + scModelName).then((nodes) => {
-                        const camera = this._viewer.view.getCamera();
-                        camera.setProjection(Communicator.Projection.Perspective);
-                        this._viewer.view.setCamera(camera);
-
-                        const params = this._getRenderingParams();
-                        this._serverCaller.CallServerPost("PrepareRendering", params).then(() => {
-                            $('[data-command="Raytracing"]').prop("disabled", false).css("background-color", "gainsboro");
-                            $("#loadingImage").hide();
-                        });
-                    });
-                });
-            });
-        });
+        await this._serverCaller.CallServerPost("PrepareRendering", this._getRenderingParams());
+        $('[data-command="Raytracing"]').prop("disabled", false).css("background-color", "gainsboro");
+        $("#loadingImage").hide();
     }
 
     _loadEnv(formData) {

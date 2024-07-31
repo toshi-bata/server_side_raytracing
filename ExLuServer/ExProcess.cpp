@@ -112,10 +112,8 @@ void ExProcess::DeleteModelFile(const char* session_id)
     }
 }
 
-std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_name, const char* sc_name)
+bool ExProcess::LoadFile(const char* session_id, const char* file_name, const char* sc_name)
 {
-    std::vector<float> floatArray;
-    
     A3DStatus iRet;
 
     A3DAsmModelFile* pModelFile;
@@ -125,7 +123,7 @@ std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_
     if (iRet != A3D_SUCCESS)
     {
         printf("File loading failed: %d\n", iRet);
-        return floatArray;
+        return false;
     }
     printf("Model was loaded\n");
     m_mModelFile.insert(std::make_pair(session_id, pModelFile));
@@ -133,17 +131,17 @@ std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_
     A3DPrcIdMap* pMap = nullptr;
     iRet = A3DPrcIdMapCreate(pModelFile, &pMap);
     if (A3D_SUCCESS != iRet || nullptr == pMap)
-        return floatArray;
+        return false;
 
     m_mPrcIdMap.insert(std::make_pair(session_id, pMap));
 
     // HC libconverter
     if (!m_libImporter.Load(pModelFile))
-        return floatArray;
+        return false;
 
     Exporter exporter; // Export Initialization
     if (!exporter.Init(&m_libImporter))
-        return floatArray;
+        return false;
 
     SC_Export_Options exportOptions; // Export Stream Cache Model
     exportOptions.sc_create_scz = true;
@@ -151,41 +149,10 @@ std::vector<float> ExProcess::LoadFile(const char* session_id, const char* file_
     exportOptions.export_exchange_ids = true;
 
     if (!exporter.WriteSC(sc_name, nullptr, exportOptions))
-        return floatArray;
+        return false;
     printf("SC model was exported\n");
- 
-    // Get unit
-    A3DAsmModelFileData sData;
-    A3D_INITIALIZE_DATA(A3DAsmModelFileData, sData);
-    iRet = A3DAsmModelFileGet(pModelFile, &sData);
-    floatArray.push_back(sData.m_dUnit);
 
-    // Retrieve physical properties
-    A3DPhysicalPropertiesData sPhysPropsData;
-    A3D_INITIALIZE_DATA(A3DPhysicalPropertiesData, sPhysPropsData);
-    iRet = A3DComputeModelFilePhysicalProperties(pModelFile, &sPhysPropsData);
-
-    floatArray.push_back(sPhysPropsData.m_dSurface);
-    floatArray.push_back(sPhysPropsData.m_dVolume);
-    floatArray.push_back(sPhysPropsData.m_sGravityCenter.m_dX);
-    floatArray.push_back(sPhysPropsData.m_sGravityCenter.m_dY);
-    floatArray.push_back(sPhysPropsData.m_sGravityCenter.m_dZ);
-
-    // Compute bounding box
-    A3DBoundingBoxData sBoundingBox;
-    A3D_INITIALIZE_DATA(A3DBoundingBoxData, sBoundingBox);
-    iRet = A3DMiscComputeBoundingBox(pModelFile, 0, &sBoundingBox);
-    double dX = sBoundingBox.m_sMax.m_dX - sBoundingBox.m_sMin.m_dX;
-    double dY = sBoundingBox.m_sMax.m_dY - sBoundingBox.m_sMin.m_dY;
-    double dZ = sBoundingBox.m_sMax.m_dZ - sBoundingBox.m_sMin.m_dZ;
-
-    floatArray.push_back(dX);
-    floatArray.push_back(dY);
-    floatArray.push_back(dZ);
-
-    iRet = A3DAsmModelFileGet(NULL, &sData);
-
-    return floatArray;
+    return true;
 }
 
 A3DAsmModelFile* ExProcess::GetModelFile(const char* session_id, A3DEntity*& pPrcIdMap)

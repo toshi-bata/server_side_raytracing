@@ -663,7 +663,11 @@ answer_to_connection(void* cls,
 
                     printf("converting...\n");
 
-                    floatArr = pExProcess->LoadFile(con_info->sessionId, filePath, scPath);
+                    if (pExProcess->LoadFile(con_info->sessionId, filePath, scPath))
+                        floatArr.push_back(1);
+                    else
+                        floatArr.push_back(0);
+
                     con_info->answerstring = response_success;
                     con_info->answercode = MHD_HTTP_OK;
                 }
