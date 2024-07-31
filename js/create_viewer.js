@@ -61,13 +61,15 @@ function createScsViewer(scsFileName, containerId) {
         if ("_empty.scs" != scsFileName) {
             var viewer = new Communicator.WebViewer({
                 containerId: containerId,
-                endpointUri: scsFileName
+                endpointUri: scsFileName,
+                enginePath: "../"
             });
         }
         else {
             var viewer = new Communicator.WebViewer({
                 containerId: containerId,
-                empty: true
+                empty: true,
+                enginePath: "../"
             });
         }
         resolve(viewer);

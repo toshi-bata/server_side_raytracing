@@ -148,7 +148,7 @@ bool ExProcess::LoadFile(const char* session_id, const char* file_name, const ch
     exportOptions.export_attributes = true;
     exportOptions.export_exchange_ids = true;
 
-    if (!exporter.WriteSC(sc_name, nullptr, exportOptions))
+    if (!exporter.WriteSC(nullptr, sc_name, exportOptions))
         return false;
     printf("SC model was exported\n");
 

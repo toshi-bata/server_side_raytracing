@@ -37,22 +37,19 @@ using namespace hoops_luminate_bridge;
 #define POSTBUFFERSIZE  512
 #define MAXCLIENTS      1
 
-static char s_pcWorkingDir[256];
-static char s_pcScModelsDir[256];
 static char s_pcModelName[256];
 static std::map<std::string, std::string> s_mParams;
 static char s_floorTexturePath[FILENAME_MAX];
+static unsigned int nr_of_uploading_clients = 0;
+static ExProcess* pExProcess;
+static HLuminateServer* m_pHLuminateServer;
+static char s_current_sessionId[256] = { '\0' };
 
 enum ConnectionType
 {
     GET = 0,
     POST = 1
 };
-
-static unsigned int nr_of_uploading_clients = 0;
-static ExProcess *pExProcess;
-static HLuminateServer* m_pHLuminateServer;
-static char current_sessionId[256] = { '\0' };
 
 /**
  * Information we keep per connection.
@@ -300,30 +297,12 @@ iterate_post(void* coninfo_cls,
             if (0 != con_info->answercode)   /* something went wrong */
                 return MHD_YES;
 
-            char filePath[FILENAME_MAX], workingDir[FILENAME_MAX];
+            char filePath[FILENAME_MAX];
 
             char lowext[64], extype[64];
             getLowerExtention(filename, lowext, extype);
             sprintf(s_pcModelName, "model.%s", lowext);
-
-#ifndef _WIN32
-            sprintf(filePath, "%s%s/%s", s_pcWorkingDir, con_info->sessionId, s_pcModelName);
-#else
-            sprintf(filePath, "%s%s\\%s", s_pcWorkingDir, con_info->sessionId, s_pcModelName);
-#endif
-
-            // Prepare working dir
-            sprintf(workingDir, "%s%s", s_pcWorkingDir, con_info->sessionId);
-#ifndef _WIN32
-            if (0 != mkdir(workingDir, 0777))
-#else
-            if (0 != mkdir(workingDir))
-#endif
-            {
-                con_info->answerstring = response_fileioerror;
-                con_info->answercode = MHD_HTTP_INTERNAL_SERVER_ERROR;
-                return MHD_YES;
-            } 
+            sprintf(filePath, "../%s/%s", con_info->sessionId, s_pcModelName);
 
             /* NOTE: This is technically a race with the 'fopen()' above,
             but there is no easy fix, short of moving to open(O_EXCL)
@@ -422,9 +401,9 @@ answer_to_connection(void* cls,
         con_info->sessionId = MHD_lookup_connection_value(connection, MHD_GET_ARGUMENT_KIND, "session_id");
         printf("Session ID: %s\n", con_info->sessionId);
 
-        if (strlen(current_sessionId))
+        if (strlen(s_current_sessionId))
         {
-            if (0 != strcmp(current_sessionId, con_info->sessionId))
+            if (0 != strcmp(s_current_sessionId, con_info->sessionId))
             {
                 printf("Server is busy\n");
 
@@ -435,7 +414,22 @@ answer_to_connection(void* cls,
         }
         else
         {
-            strcpy(current_sessionId, con_info->sessionId);
+            strcpy(s_current_sessionId, con_info->sessionId);
+
+            // Create working dir
+            char workingDir[FILENAME_MAX];
+            sprintf(workingDir, "../%s", con_info->sessionId);
+
+#ifndef _WIN32
+            if (0 != mkdir(workingDir, 0777))
+#else
+            if (0 != mkdir(workingDir))
+#endif
+            {
+                con_info->answerstring = response_servererror;
+                con_info->answercode = MHD_HTTP_OK;
+                return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+            }
         }
 
         if (0 == strcasecmp(method, MHD_HTTP_METHOD_POST))
@@ -499,74 +493,29 @@ answer_to_connection(void* cls,
         /* Upload finished */
         if (0 == strcmp(url, "/Clear"))
         {
-            // Delete SC model
-            char scDir[FILENAME_MAX];
-            sprintf(scDir, "%s%s", s_pcScModelsDir, con_info->sessionId);
+            // Delete working dir
+            char workingDir[FILENAME_MAX];
+            sprintf(workingDir, "../%s", con_info->sessionId);
 
 #ifndef _WIN32
-            delete_files(scDir);
-            delete_dirs(scDir);
+            delete_files(workingDir);
+            delete_files(workingDir);
 #else
             wchar_t wscDir[_MAX_FNAME];
             size_t iRet;
-            mbstowcs_s(&iRet, wscDir, _MAX_FNAME, scDir, _MAX_FNAME);
+            mbstowcs_s(&iRet, wscDir, _MAX_FNAME, workingDir, _MAX_FNAME);
             delete_dirs(wscDir);
 #endif
 
             // Delete ModelFile
             pExProcess->DeleteModelFile(con_info->sessionId);
 
-            char filePath[FILENAME_MAX];
-
-            // Delete previous rendering image
-
-#ifndef _WIN32
-            sprintf(filePath, "../%s.png", con_info->sessionId);
-            delete_files(filePath);
-#else
-            sprintf(filePath, "..\\%s.png", con_info->sessionId);
-            {
-                wchar_t wFilePath[_MAX_FNAME];
-                mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
-                _wremove(wFilePath);
-            }
-#endif
-            // Delete thumbnail image
-            int envMapId = m_pHLuminateServer->GetNewEnvMapId(con_info->sessionId);
-            for (int i = 0; i < envMapId; i++)
-            {
-#ifndef _WIN32
-                sprintf(filePath, "../Lighting/EnvMapThumb_%s_%d.png", con_info->sessionId, i + 1);
-                delete_files(filePath);
-#else
-                {
-                    sprintf(filePath, "..\\Lighting\\EnvMapThumb_%s_%d.png", con_info->sessionId, i + 1);
-                    wchar_t wFilePath[_MAX_FNAME];
-                    mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, filePath, _MAX_FNAME);
-                    _wremove(wFilePath);
-                }
-#endif
-            }
-
             // Delete Luminate session
             if (m_pHLuminateServer->ClearSession(con_info->sessionId))
                 printf("HOOPS Luminate is terminated.\n");
 
-            // Delete texture file
-            if (0 < strlen(s_floorTexturePath))
-            {
-#ifndef _WIN32
-                delete_files(s_floorTexturePath);
-#else
-                {
-                    wchar_t wFilePath[_MAX_FNAME];
-                    mbstowcs_s(&iRet, wFilePath, _MAX_FNAME, s_floorTexturePath, _MAX_FNAME);
-                    _wremove(wFilePath);
-                }
-#endif
-            }
-
-            strcpy(current_sessionId, "");
+            strcpy(s_current_sessionId, "");
+            sprintf(s_floorTexturePath, "");
 
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
@@ -591,18 +540,11 @@ answer_to_connection(void* cls,
             {
                 /* No errors encountered, declare success */
                 // Convert to SC
-                char basename[256], filePath[FILENAME_MAX], scPath[FILENAME_MAX], workingDir[FILENAME_MAX], scDir[FILENAME_MAX];
+                char basename[256], filePath[FILENAME_MAX], scPath[FILENAME_MAX];
                 getBaseName(s_pcModelName, basename);
 
-#ifndef _WIN32
-                sprintf(filePath, "%s%s/%s", s_pcWorkingDir, con_info->sessionId, s_pcModelName);
-                sprintf(scPath, "%s%s/%s",s_pcScModelsDir ,con_info->sessionId, basename);
-#else
-                sprintf(filePath, "%s%s\\%s", s_pcWorkingDir, con_info->sessionId, s_pcModelName);
-                sprintf(scPath, "%s%s\\%s", s_pcScModelsDir, con_info->sessionId, basename);
-#endif
-                sprintf(workingDir, "%s%s", s_pcWorkingDir, con_info->sessionId);
-                sprintf(scDir, "%s%s", s_pcScModelsDir, con_info->sessionId);
+                sprintf(filePath, "../%s/%s", con_info->sessionId, s_pcModelName);
+                sprintf(scPath, "../%s/model.scs", con_info->sessionId);
                 
                 char lowExt[256];
                 char fileType[256];
@@ -614,11 +556,8 @@ answer_to_connection(void* cls,
                     // Load environment map file
                     int envMapId = m_pHLuminateServer->GetNewEnvMapId(con_info->sessionId);
                     char thumbnailPath[FILENAME_MAX];
-#ifndef _WIN32
-                    sprintf(thumbnailPath, "../Lighting/EnvMapThumb_%s_%d.png", con_info->sessionId, envMapId + 1);
-#else
-                    sprintf(thumbnailPath, "..\\Lighting\\EnvMapThumb_%s_%d.png", con_info->sessionId, envMapId + 1);
-#endif
+                    sprintf(thumbnailPath, "../%s/EnvMapThumb_%d.png", con_info->sessionId, envMapId + 1);
+ 
                     if (m_pHLuminateServer->LoadEnvMapFile(con_info->sessionId, filePath, thumbnailPath))
                         floatArr.push_back(1);
                     else
@@ -629,21 +568,8 @@ answer_to_connection(void* cls,
                 }
                 else if (0 == strcmp(lowExt, "jpg") || 0 == strcmp(lowExt, "jpeg") || 0 == strcmp(lowExt, "png"))
                 {
-#ifndef _WIN32
-                    sprintf(s_floorTexturePath, "../texture-%s.%s", con_info->sessionId, lowExt);
-#else
-                    sprintf(s_floorTexturePath, "..\\texture-%s.%s", con_info->sessionId, lowExt);
-#endif
+                    strcpy(s_floorTexturePath, filePath);
 
-#ifndef _WIN32
-#else
-                    wchar_t wsFilePathFrom[_MAX_FNAME], wsFilePathTo[_MAX_FNAME];
-                    size_t iRet;
-                    mbstowcs_s(&iRet, wsFilePathFrom, _MAX_FNAME, filePath, _MAX_FNAME);
-                    mbstowcs_s(&iRet, wsFilePathTo, _MAX_FNAME, s_floorTexturePath, _MAX_FNAME);
-
-                    CopyFile(wsFilePathFrom, wsFilePathTo, FALSE);
-#endif
                     floatArr.push_back(1);
                     con_info->answerstring = response_success;
                     con_info->answercode = MHD_HTTP_OK;
@@ -651,16 +577,6 @@ answer_to_connection(void* cls,
                 else
                 {
                     // Load 3D CAD file
-#ifndef _WIN32
-                if (0 != mkdir(scDir, 0777))
-#else
-                    if (0 != mkdir(scDir))
-#endif
-                    {
-                        con_info->answerstring = response_fileioerror;
-                        con_info->answercode = MHD_HTTP_INTERNAL_SERVER_ERROR;
-                    }
-
                     printf("converting...\n");
 
                     if (pExProcess->LoadFile(con_info->sessionId, filePath, scPath))
@@ -672,16 +588,6 @@ answer_to_connection(void* cls,
                     con_info->answercode = MHD_HTTP_OK;
                 }
 
-                // Delete uploaded file and working dir
-#ifndef _WIN32
-                delete_files(workingDir);
-                delete_dirs(workingDir);
-#else
-                wchar_t wscDir[_MAX_FNAME];
-                size_t iRet;
-                mbstowcs_s(&iRet, wscDir, _MAX_FNAME, workingDir, _MAX_FNAME);
-                delete_dirs(wscDir);
-#endif
                 return sendResponseFloatArr(connection, floatArr);
             }
         }
@@ -750,11 +656,8 @@ answer_to_connection(void* cls,
         {
 
             char filePath[FILENAME_MAX];
-#ifndef _WIN32
-            sprintf(filePath, "../%s.png", con_info->sessionId);
-#else
-            sprintf(filePath, "..\\%s.png", con_info->sessionId);
-#endif
+            sprintf(filePath, "../%s/image.png", con_info->sessionId);
+
             std::vector<float> floatArr = m_pHLuminateServer->Draw(con_info->sessionId, filePath);
 
             con_info->answerstring = response_success;
@@ -942,19 +845,6 @@ main(int argc, char** argv)
 
     int iPort = atoi(argv[1]);
     printf("Bind to %d port\n", iPort);
-
-    // Get working dir
-    GetEnvironmentVariablePath("EX_SERVER_WORKING_DIR", s_pcWorkingDir, true);
-    if (0 == strlen(s_pcWorkingDir))
-        return 1;
-    printf("EX_SERVER_WORKING_DIR=%s\n", s_pcWorkingDir);
-
-    // Get SC model dir
-    GetEnvironmentVariablePath("HCOMMUNICATOR_INSTALL_DIR", s_pcScModelsDir, true);
-    if (0 == strlen(s_pcScModelsDir))
-        return 1;
-    strcat(s_pcScModelsDir, "quick_start\\converted_models\\user\\sc_models\\");
-    printf("SC_MODELS_DIR=%s\n", s_pcScModelsDir);
 
     pExProcess = new ExProcess();
     if (!pExProcess->Init())

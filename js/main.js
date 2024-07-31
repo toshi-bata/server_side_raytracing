@@ -6,6 +6,7 @@ class Main {
     constructor() {
         this._viewer;
         this._port;
+        this._viewerMode;
         this._reverseProxy;
         this._sessionId;
         this._serverCaller;
@@ -36,12 +37,13 @@ class Main {
 
     start (port, viewerMode, modelName, reverseProxy) {
         this._port = port;
+        this._viewerMode = viewerMode.toUpperCase();
         this._reverseProxy = reverseProxy;
         this._timerId = null;
         this._isBusy = false;
         this._floorMeshId = null;
         this._requestServerProcess();
-        this._createViewer(viewerMode, modelName);
+        this._createViewer(this._viewerMode, modelName);
         this._initEvents();
         this._invokeNew();
     }
@@ -414,7 +416,7 @@ class Main {
                     this._deleteFloor();
                 } break;
                 case "Download": {
-                    const serverName = this._sessionId + ".png";
+                    const serverName = this._sessionId + "/image.png";
                     const downloadName = "image.png";
                     this._downloadImage(serverName, downloadName);
 
@@ -511,7 +513,14 @@ class Main {
 
             if (undefined != this._viewer) {
                 // Delete model
-                this._viewer.model.switchToModel("_empty").then(() => {
+                let promiseArr = [];
+                const root = this._viewer.model.getAbsoluteRootNode();
+                const childNodes = this._viewer.model.getNodeChildren(root);
+                for (let node of childNodes) {
+                    promiseArr.push(this._viewer.model.deleteNode(node));
+                }
+
+                Promise.all(promiseArr).then(() => {
                     // Reset server
                     this._serverCaller.CallServerPost("Clear").then((res) => {
                         this._requestServerProcess();
@@ -590,7 +599,18 @@ class Main {
         const arr = await this._serverCaller.CallServerSubmitFile(formData);
         if (0 == arr[0]) return;
 
-        const nodes = await this._viewer.model.switchToModel(this._sessionId + "/" + scModelName);
+        const root = this._viewer.model.getAbsoluteRootNode();
+        const childNodes = this._viewer.model.getNodeChildren(root);
+        for (let node of childNodes) {
+            await this._viewer.model.deleteNode(node);
+        }
+        const config = new Communicator.LoadSubtreeConfig();
+        if (this._viewerMode == "CSR" || this._viewerMode == "SSR") {
+            await this._viewer.model.loadSubtreeFromModel(root, this._sessionId + "/" + scModelName, config);
+        }
+        else {
+            await this._viewer.model.loadSubtreeFromScsFile(root, this._sessionId  + "/" + scModelName + ".scs", config);
+        }
         const camera = this._viewer.view.getCamera();
         camera.setProjection(Communicator.Projection.Perspective);
         this._viewer.view.setCamera(camera);
@@ -612,7 +632,7 @@ class Main {
                     this._lightingDB.push({
                         id: this._lightingDB.length,
                         name: 'My EnvMap-' + String(id), 
-                        img: "EnvMapThumb_" + this._sessionId + "_" + String(id) + ".png"
+                        img: this._sessionId + "/EnvMapThumb_" + String(id) + ".png"
                     });
 
                     this._setLightingThumbClickHandler();
@@ -640,7 +660,12 @@ class Main {
         // Set thumbnails
         for (let item of list) {
             const image = new Image();
-            image.src = "Lighting/" + item.img;
+            if (-1 == item.img.indexOf("/EnvMapThumb_")) {
+                image.src = "Lighting/" + item.img;
+            }
+            else {
+                image.src = item.img;
+            }
 
             let $ele = $('<div />', {class:'itemList_thumbnail lightingItem',title: item.name});
             $($ele).append(image);
@@ -733,7 +758,7 @@ class Main {
                         const renderingProgress = arr[1] * 100;
                         const remainingTimeMilliseconds = arr[2];
                         const now = new Date().getTime();
-                        $('#backgroundImg').attr('src', this._sessionId + '.png?' + now);
+                        $('#backgroundImg').attr('src', this._sessionId + '/image.png?' + now);
 
                         $("#progressBar").progressbar("value", renderingProgress);
 

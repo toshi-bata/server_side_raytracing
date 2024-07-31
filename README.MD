@@ -48,12 +48,9 @@ ExLuServer is a server side console application which is using HOOPS Exchange, L
     `cd path/to/server_side_exchange`<br>
     `npm install`<br>
     `npm start`<br>
-2. Start Communicator SC server (<Communicator SDK>/quick_start/start_server)
-3. Register the following enviroment valiables<br>
-    Name: `EX_SERVER_WORKING_DIR`&emsp;Value: `path¥to¥temp¥folder`<br>
-4. Start ExLuServer (giving a port number in command line argument)<br>
+2. Start ExLuServer (giving a port number in command line argument)<br>
     Windows: `ExLuServer 8888`<br>
-5. Open the main.html with server's port number (using Chrome)<br>
-    `http://localhost:8000/main.html?viewer=CSR&instance=_empty&port=8888`
+3. Open the main.html with server's port number (using Chrome)<br>
+    `http://localhost:8000/main.html?viewer=SCS&instance=_empty.scs&port=8888`
 Since one ExLuServer only supports one client, you need to start the ExLuServer with a different port number for each client. 
 
