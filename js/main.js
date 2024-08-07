@@ -1,11 +1,13 @@
 import * as Communicator from "@hoops/web-viewer";
-import { createViewer } from "/js/create_viewer.js";
-import { SetMaterialOperator } from "/js/SetMaterialOp.js";
-import { CreateFloorOperator } from "/js/CreateFloorOp.js";
+import { createViewer } from "./create_viewer.js";
+import { SetMaterialOperator } from "./SetMaterialOp.js";
+import { CreateFloorOperator } from "./CreateFloorOp.js";
 class Main {
     constructor() {
         this._viewer;
         this._port;
+        this._pid;
+        this._isDebug = false;
         this._viewerMode;
         this._reverseProxy;
         this._sessionId;
@@ -37,27 +39,40 @@ class Main {
 
     start (port, viewerMode, modelName, reverseProxy) {
         this._port = port;
+        if (null != this._port) { this._isDebug = true; }
         this._viewerMode = viewerMode.toUpperCase();
         this._reverseProxy = reverseProxy;
         this._timerId = null;
         this._isBusy = false;
         this._floorMeshId = null;
-        this._requestServerProcess();
+        this._requestProcesServer(8080);
+        this._requestExServerSession();
         this._createViewer(this._viewerMode, modelName);
         this._initEvents();
         this._invokeNew();
     }
 
-    _requestServerProcess () {
+    _requestProcesServer(port) {
+        // Create Process Server caller
+        let serverURL = window.location.protocol + "//" + window.location.hostname + ":" + port;
+        if (this._reverseProxy) {
+            serverURL = window.location.protocol + "//" + window.location.hostname + "/httpproxy/" + port;
+        }
+        this._serverCaller = new ServerCaller(serverURL, this._sessionId);
+    } 
+
+    _requestExServerSession () {
+        if (null == this._port) return;
+
         this._sessionId = create_UUID();
 
-        // Create PsServer caller
-        let psServerURL = window.location.protocol + "//" + window.location.hostname + ":" + this._port;
+        // Create ExLuServer caller
+        let serverURL = window.location.protocol + "//" + window.location.hostname + ":" + this._port;
         if (this._reverseProxy) {
-            psServerURL = window.location.protocol + "//" + window.location.hostname + "/httpproxy/" + this._port;
+            serverURL = window.location.protocol + "//" + window.location.hostname + "/httpproxy/" + this._port;
         }
 
-        this._serverCaller = new ServerCaller(psServerURL, this._sessionId);
+        this._serverCaller.SetNewSession(serverURL, this._sessionId);
     }
 
     _createViewer(viewerMode, modelName) {
@@ -100,7 +115,7 @@ class Main {
                     }
                 },
                 timeout: () => {
-                    //this._serverCaller.CallServerPost("Clear");
+                    this._serverCaller.CallServerPost("Terminate");
                     console.log("Timeout");
                 }
             });
@@ -137,7 +152,14 @@ class Main {
 
         // Before page reload or close
         $(window).on('beforeunload', (e) => {
-            this._serverCaller.CallServerPost("Clear");
+            if (this._isDebug) {
+                this._serverCaller.CallServerPost("Clear");
+            }
+            else if (null != this._port) {
+                this._serverCaller.CallServerPost("Terminate");
+                const params = { port: this._port, pid: this._pid };
+                this._serverCaller.CallProcessServer("end", params);
+            }
         });
 
         // File uploading
@@ -362,7 +384,7 @@ class Main {
             change: () => {
               $("#progressTxt").text($("#progressBar").progressbar("value").toFixed(1) + "%");
             },
-            complete: function() {
+            complete: () => {
               $("#progressTxt").text($("#progressBar").progressbar("value").toFixed(1) + "% completed");
             }
           });
@@ -465,6 +487,10 @@ class Main {
             // Stop rendering
             this._clearRaytracing();
 
+            // Hide progress bar
+            $("#progressBar").progressbar("value", 0);
+            $('#progress').hide();
+
             // Close Set Material dialog
             if ($('#materialsDlg').dialog('isOpen')) $("#materialsDlg").dialog('close');
 
@@ -496,6 +522,9 @@ class Main {
                 this._setMaterialThumbnail("Metal");
             }
 
+            // Set default backgrond image
+            $('#backgroundImg').attr('src', 'css/images/default_background.png');
+
             // Load default lighting list from JSON file
             const lighting_url = "Lighting/lighting_list.json";
             $.getJSON(lighting_url, (obj) => {
@@ -512,6 +541,9 @@ class Main {
             });
 
             if (undefined != this._viewer) {
+                // Set default opetators
+                this._setDefaultOperators();
+
                 // Delete model
                 let promiseArr = [];
                 const root = this._viewer.model.getAbsoluteRootNode();
@@ -522,13 +554,32 @@ class Main {
 
                 Promise.all(promiseArr).then(() => {
                     // Reset server
-                    this._serverCaller.CallServerPost("Clear").then((res) => {
-                        this._requestServerProcess();
-                        // Set default opetators
-                        this._setDefaultOperators();
+                    if (null != this._port) {
+                        if (!this._isDebug) {
+                            // Release mode
+                            // Terminate ExLuServer
+                            this._serverCaller.CallServerPost("Terminate");
+                            
+                            const params = { port: this._port, pid: this._pid };
+                            this._serverCaller.CallProcessServer("end", params);
 
-                        return resolve(res);
-                    });
+                            this._port = null;
+                            this._pid = null;
+
+                            // Wait for a while
+                            setTimeout(() => {
+                                return resolve();
+                            }, 5000);
+                        }
+                        else {
+                            // Debug mode
+                            this._serverCaller.CallServerPost("Clear");
+                            return resolve();
+                        }
+                    }
+                    else {
+                        return resolve();
+                    }
                 });
             }
             else {
@@ -588,11 +639,26 @@ class Main {
         const now = new Date().getTime();
         $('#backgroundImg').attr('src', 'css/images/default_background.png');
 
-        const res = await this._invokeNew();
-        if ("success" != res) {
-            $("#loadingImage").hide();
-            alert("Server is busy.");
-            return;
+        await this._invokeNew();
+
+        // Start ExLuServer
+        if (!this._isDebug) {
+            const str = await this._serverCaller.CallProcessServer("start");
+            const retObj = JSON.parse(str);
+            const port = retObj.port;
+            if (0 < port) {
+                this._port = port;
+                this._pid = retObj.pid;
+                this._requestExServerSession();
+            }
+            else {
+                alert("Process server failed to start an Exchange-Luminate server instance.");
+                $("#loadingImage").hide();
+                return;
+            }
+        }
+        else {
+            this._requestExServerSession();
         }
 
         await this._serverCaller.CallServerPost("SetOptions", params);
@@ -600,10 +666,6 @@ class Main {
         if (0 == arr[0]) return;
 
         const root = this._viewer.model.getAbsoluteRootNode();
-        const childNodes = this._viewer.model.getNodeChildren(root);
-        for (let node of childNodes) {
-            await this._viewer.model.deleteNode(node);
-        }
         const config = new Communicator.LoadSubtreeConfig();
         if (this._viewerMode == "CSR" || this._viewerMode == "SSR") {
             await this._viewer.model.loadSubtreeFromModel(root, this._sessionId + "/" + scModelName, config);
@@ -611,9 +673,13 @@ class Main {
         else {
             await this._viewer.model.loadSubtreeFromScsFile(root, this._sessionId  + "/" + scModelName + ".scs", config);
         }
+
+        await this._viewer.view.resetCamera();
+        await this._viewer.view.fitWorld();
+
         const camera = this._viewer.view.getCamera();
         camera.setProjection(Communicator.Projection.Perspective);
-        this._viewer.view.setCamera(camera);
+        await this._viewer.view.setCamera(camera);
 
         await this._serverCaller.CallServerPost("PrepareRendering", this._getRenderingParams());
         $('[data-command="Raytracing"]').prop("disabled", false).css("background-color", "gainsboro");
@@ -795,7 +861,6 @@ class Main {
             clearInterval(this._timerId);
             this._timerId = null;
             this._isBusy = false;
-            $("#loadingImage").hide();
         }
     }
 

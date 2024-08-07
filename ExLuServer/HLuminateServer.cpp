@@ -110,8 +110,8 @@ bool HLuminateServer::PrepareRendering(std::string sessionId,
 
         CameraInfo cameraInfo = lumSession.pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
-        //lumSession.hwnd = CreateWndow(0, 0);
-        lumSession.hwnd = GetConsoleWindow();
+        lumSession.hwnd = CreateWndow(0, 0);
+        //lumSession.hwnd = GetConsoleWindow();
 
         std::string filepath = "";
         lumSession.pHCLuminateBridge->initialize(HOOPS_LICENSE, lumSession.hwnd, width, height, filepath, cameraInfo);
@@ -138,7 +138,7 @@ bool HLuminateServer::StartRendering(std::string sessionId,
         CameraInfo cameraInfo = lumSession.pHCLuminateBridge->creteCameraInfo(target, up, position, projection, cameraW, cameraH);
 
         lumSession.pHCLuminateBridge->setModelFile(pModelFile, pPrcIdMap);
-        
+
         lumSession.pHCLuminateBridge->syncScene(width, height, cameraInfo);
 
         return true;
@@ -192,8 +192,8 @@ bool HLuminateServer::ClearSession(std::string sessionId)
 
         delete lumSession.pHCLuminateBridge;
 
-        //if (NULL != lumSession.hwnd)
-        //    DestroyWindow(lumSession.hwnd);
+        if (NULL != lumSession.hwnd)
+            DestroyWindow(lumSession.hwnd);
 
         m_mHLuminateSession.erase(sessionId);
 

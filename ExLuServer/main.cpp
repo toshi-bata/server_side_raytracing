@@ -19,6 +19,8 @@
 #include "ExProcess.h"
 #include <windows.h>
 #include "HLuminateServer.h"
+#include <fstream>
+#include <ctime>
 
 using namespace hoops_luminate_bridge;
 
@@ -90,6 +92,31 @@ const char* response_fileioerror = "IO error writing to disk.";
 const char* const response_postprocerror = "Error processing POST data";
 const char* response_conversionerror = "Conversion error";
 const char* response_success = "success";
+
+void exportLog(char* msgBuffer, bool isNew = false)
+{
+    std::ofstream ofs;
+    
+    char filePath[FILENAME_MAX];
+    sprintf(filePath, "../%s/logfile.log", s_current_sessionId);
+    std::ios_base::openmode mode = std::ios_base::out;
+    if (isNew)
+        mode = std::ios_base::out;
+    else
+        mode = std::ios_base::out | std::ios_base::app;
+    ofs.open(filePath, mode);
+
+    std::time_t now = std::time(nullptr);
+    char* current_time = std::ctime(&now);
+
+    char timeBuffer[256];
+    strcpy(timeBuffer, current_time);
+    timeBuffer[strlen(current_time) - 1] = '\0';
+
+    ofs<< timeBuffer << ": " << msgBuffer << std::endl;
+
+    ofs.close();
+}
 
 static enum MHD_Result
 sendResponseSuccess(struct MHD_Connection* connection)
@@ -430,6 +457,11 @@ answer_to_connection(void* cls,
                 con_info->answercode = MHD_HTTP_OK;
                 return sendResponseText(connection, con_info->answerstring, con_info->answercode);
             }
+
+            // Log
+            char buffer[256];
+            sprintf(buffer, "New session was started: %s", s_current_sessionId);
+            exportLog(buffer, true);
         }
 
         if (0 == strcasecmp(method, MHD_HTTP_METHOD_POST))
@@ -491,6 +523,12 @@ answer_to_connection(void* cls,
             return MHD_YES;
         }
         /* Upload finished */
+
+        // Log
+        char buffer[256];
+        sprintf(buffer, "Called: %s", url);
+        exportLog(buffer);
+
         if (0 == strcmp(url, "/Clear"))
         {
             // Delete working dir
@@ -528,6 +566,31 @@ answer_to_connection(void* cls,
             con_info->answerstring = response_success;
             con_info->answercode = MHD_HTTP_OK;
             return sendResponseText(connection, con_info->answerstring, con_info->answercode);
+        }
+        else if (0 == strcmp(url, "/Terminate"))
+        {
+            // Delete working dir
+            char workingDir[FILENAME_MAX];
+            sprintf(workingDir, "../%s", con_info->sessionId);
+
+#ifndef _WIN32
+            delete_files(workingDir);
+            delete_files(workingDir);
+#else
+            wchar_t wscDir[_MAX_FNAME];
+            size_t iRet;
+            mbstowcs_s(&iRet, wscDir, _MAX_FNAME, workingDir, _MAX_FNAME);
+            delete_dirs(wscDir);
+#endif
+
+            delete pExProcess;
+
+            m_pHLuminateServer->Terminate();
+            delete m_pHLuminateServer;
+
+            printf("HOOPS Luminate terminated\n");
+
+            exit(0);
         }
         else if (0 == strcmp(url, "/FileUpload"))
         {
@@ -854,7 +917,7 @@ main(int argc, char** argv)
     }
     printf("HOOPS Exchange Loaded.\n");
 
-    // Assign Luminate license.
+    // Luminate
     m_pHLuminateServer = new HLuminateServer();
 
     struct MHD_Daemon* daemon;

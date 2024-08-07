@@ -106,3 +106,17 @@ function hex2rgb ( hex ) {
         return parseInt( str, 16 ) ;
     } ) ;
 }
+
+ function encodeHTMLForm (data)
+{
+    let params = new Array(0);
+
+    for (let name in data ) {
+        const value = data[name];
+        const param = encodeURIComponent(name) + '=' + encodeURIComponent(value);
+
+        params.push( param );
+    }
+
+    return params.join("&").replace( /%20/g, "+");
+}

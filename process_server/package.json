@@ -1,0 +1,16 @@
+{
+  "name": "http-server",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./index.js"
+  },
+  "dependencies": {
+    "connect": "",
+    "ps-tree": "^1.2.0",
+    "serve-static": ""
+  },
+  "directories": {
+    "bin": "../"
+  }
+}
