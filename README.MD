@@ -19,7 +19,7 @@ This demo runs raytracing rendring in server side using offscreen buffer of HOOP
 
 ## Setup
 ### Demo folders
-&emsp;+ http root in releae mode
+&emsp;+ http root in releae mode<br>
 &emsp;&emsp;+ demo-app (copy demo-app folder from Communicator_SDK\web_viewer)<br>
 &emsp;&emsp;+ engine.esm.wasm.js (copy engine.esm.wasm.js file from Communicator_SDK\web_viewer)<br>
 &emsp;&emsp;+ hoops-web-viewer.mjs (copy hoops-web-viewer.js file from Communicator_SDK\web_viewer)<br>
