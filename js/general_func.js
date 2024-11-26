@@ -67,37 +67,6 @@ function create_UUID(){
     return uuid;
 }
 
-// compute angle and rotation axis between two vectors
-function vectorsAngleDeg(point3d1, point3d2) {
-    if (point3d1.equalsWithTolerance(point3d2, 1.0E-8)) {
-        return {
-            angleDeg: 0, 
-            axis: undefined
-        }
-    }
-
-    if (point3d1.equalsWithTolerance(point3d2.copy().negate(), 1.0E-8)) {
-        return {
-            angleDeg: 180, 
-            axis: undefined
-        }
-    }
-
-    // compute angle
-    var dot = Communicator.Point3.dot(point3d1, point3d2);
-
-    var angleDeg = Math.acos(dot) / Math.PI * 180;
-    
-    // consider rotation direction
-    var rotateAxis = Communicator.Point3.cross(point3d1, point3d2);
-    rotateAxis.normalize();
-
-    return {
-        angleDeg: angleDeg, 
-        axis: rotateAxis
-    }
-}
-
 function hex2rgb ( hex ) {
     if ( hex.slice(0, 1) == "#" ) hex = hex.slice(1) ;
     if ( hex.length == 3 ) hex = hex.slice(0,1) + hex.slice(0,1) + hex.slice(1,2) + hex.slice(1,2) + hex.slice(2,3) + hex.slice(2,3) ;

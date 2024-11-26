@@ -89,12 +89,12 @@ class CreateFloorOperator {
             this._markup = new FloorMarkup(this._viewer, this._vertices);
         }
 
-        this._markupHandle = this._viewer.markupManager.registerMarkup(this._markup);
+        this._markupHandle = this._viewer.markupManager.registerMarkup(this._markup, this._viewer.view);
     }
 
     Close() {
         if (null != this._markupHandle) {
-            this._viewer.markupManager.unregisterMarkup(this._markupHandle);
+            this._viewer.markupManager.unregisterMarkup(this._markupHandle, this._viewer.view);
             this._markupHandle = null;
         }
     }
@@ -109,7 +109,7 @@ class CreateFloorOperator {
         if (Communicator.Button.Left != event.getButton()) return;
 
         var selectPoint = event.getPosition();
-        const markup = this._viewer.markupManager.pickMarkupItem(selectPoint);
+        const markup = this._viewer.markupManager.pickMarkupItem(selectPoint, this._viewer.view);
         if (markup) {
             this._activeID = markup.GetSelectedId();
             if (0 <= this._activeID) {
@@ -308,13 +308,44 @@ class FloorMarkup extends Communicator.Markup.MarkupItem {
                 }
                 const vect1 = this._vertices[i].copy().subtract(this._vertices[prevId]).normalize();
                 const vect2 = midVertex.copy().subtract(this._vertices[prevId]).normalize();
-                const angleAxisc = vectorsAngleDeg(vect1, vect2);
+                const angleAxisc = this._vectorsAngleDeg(vect1, vect2);
                 if (0 < angleAxisc.axis.z) {
                     this._midVertices[String(midId)] = undefined;
                 }
             }
         }
-        this._viewer.markupManager.refreshMarkup();
+        this._viewer.markupManager.refreshMarkup(this._viewer.view);
+    }
+
+    // compute angle and rotation axis between two vectors
+    _vectorsAngleDeg(point3d1, point3d2) {
+        if (point3d1.equalsWithTolerance(point3d2, 1.0E-8)) {
+            return {
+                angleDeg: 0, 
+                axis: undefined
+            }
+        }
+
+        if (point3d1.equalsWithTolerance(point3d2.copy().negate(), 1.0E-8)) {
+            return {
+                angleDeg: 180, 
+                axis: undefined
+            }
+        }
+
+        // compute angle
+        var dot = Communicator.Point3.dot(point3d1, point3d2);
+
+        var angleDeg = Math.acos(dot) / Math.PI * 180;
+        
+        // consider rotation direction
+        var rotateAxis = Communicator.Point3.cross(point3d1, point3d2);
+        rotateAxis.normalize();
+
+        return {
+            angleDeg: angleDeg, 
+            axis: rotateAxis
+        }
     }
 }
 export {
