@@ -1,16 +1,17 @@
 ifeq ($(shell uname),Linux)
-	BIN = /var/www/authoring/converter/bin/linux64/ExServer
+	BIN = /var/www/html/server_side_raytracing/linux64/ExLuServer
 else
 	BIN = /Users/toshi/SDK/Communicator/HOOPS_Communicator_2023_U1/authoring/converter/bin/macos/ExServer
 endif
 
-OBJS = main.cpp utilities.cpp ExProcess.cpp AddAttributesVisitor.cpp ClassifyEntityVisitor.cpp FeatureRecognitionVisitor.cpp ./visitor/BrepTraverse.cpp ./visitor/CascadedAttributeConnector.cpp ./visitor/MarkupTessConnector.cpp ./visitor/MarkupTraverse.cpp ./visitor/Matrix.cpp ./visitor/TessConnector.cpp ./visitor/TransfoConnector.cpp ./visitor/TreeTraverse.cpp ./visitor/ViewTraverse.cpp ./visitor/VisitorCascadedAttribute.cpp ./visitor/VisitorContainer.cpp ./visitor/VisitorTessellation.cpp ./visitor/VisitorTransfo.cpp ./visitor/VisitorTree.cpp
+OBJS = main.cpp utilities.cpp ExProcess.cpp HLuminateServer.cpp ./hoops_luminate_bridge/src/AxisTriad.cpp ./hoops_luminate_bridge/src/ConversionTools.cpp ./hoops_luminate_bridge/src/HoopsExLuminateBridge.cpp ./hoops_luminate_bridge/src/HoopsLuminateBridge.cpp ./hoops_luminate_bridge/src/LightingEnvironment.cpp
 CC = g++ -std=c++11
 
 ifeq ($(shell uname),Linux)
 	PATH_TO_INCLUDES = -I /usr/local/include \
-					-I /var/hoops/HOOPS_Exchange_Publish_2023_U1/include \
-					-I /var/www/authoring/libconverter/include
+					-I /var/hoops/HOOPS_Exchange_Publish_2024.8.0/include \
+					-I /var/www/authoring/libconverter/include \
+					-I /var/hoops/HOOPS_Luminate_2024.7.0/include
 
 	PATH_TO_LIBCONVERTER = /var/www/authoring/converter/bin/linux64
 else

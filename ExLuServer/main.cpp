@@ -9,6 +9,7 @@
 #else
 #include <winsock2.h>
 #include <direct.h>
+//#include <windows.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +18,6 @@
 #include <microhttpd.h>
 #include "utilities.h"
 #include "ExProcess.h"
-#include <windows.h>
 #include "HLuminateServer.h"
 #include <fstream>
 #include <ctime>

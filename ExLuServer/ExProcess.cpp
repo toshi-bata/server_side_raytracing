@@ -4,6 +4,7 @@
 
 #include <iterator>
 #include <sstream>
+#include "hoops_license.h"
 
 static double s_dUnit = 1.0;
 

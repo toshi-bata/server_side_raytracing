@@ -74,6 +74,7 @@ class CreateFloorOperator {
         this._activeID = -1;
         if (0 == this._vertices.length) {
             const box = await this._viewer.model.getModelBounding(true, false);
+            // box.min.z += 40;
             this._vertices.push(box.min);
             this._vertices.push(new Communicator.Point3(box.max.x, box.min.y, box.min.z));
             this._vertices.push(new Communicator.Point3(box.max.x, box.max.y, box.min.z));

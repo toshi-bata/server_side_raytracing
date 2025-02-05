@@ -1,4 +1,4 @@
-#include <hoops_luminate_bridge/LightingEnvironment.h>
+﻿#include <hoops_luminate_bridge/LightingEnvironment.h>
 
 #include <REDFactory.h>
 #include <REDILightShape.h>
@@ -235,13 +235,29 @@ namespace hoops_luminate_bridge {
 
         // Create the physical sky texture used for illumination.
         RED::ISkyLightShape* isky = _sky->As<RED::ISkyLightShape>();
+
+        const RED::Vector3 sun_dir(-0.4472f, 0.0f, 0.8944f);
+
+        RC_TEST(isky->SetPhysicalModel(
+            1.0, 1.0, 1.0, 10, 0.3, 0.8, 0.7, sun_dir, 
+            0.1,    //iSunRadiusScale – sun radius scaling (set it to 1.0 to get the real sun size) 
+            0.05,    //iSunIntensityMultiplier – sun intensity multiplier (set it to 1.0 to get the real sun intensity).
+            sun_dir, 0.0, 0.0, 0.0, 1.0, iresourceManager->GetState()));
+
         RC_TEST(isky->SetSkyTexture(sky_hdr, false, RED::Vector3::XAXIS, RED::Vector3::ZAXIS, iresourceManager->GetState()));
         RED::ILightShape* iskylight = _sky->As<RED::ILightShape>();
         RC_TEST(iskylight->SetRenderMode(RED::RM_SHADOW_CASTER, 1, iresourceManager->GetState()));
 
+        // Create the sun light.
+        RED::Object* sun = nullptr;
+        RC_TEST(isky->SetSunLight(sun, iresourceManager->GetState()));
+        RED::ILightShape* isun = sun->As<RED::ILightShape>();
+        RC_TEST(isun->SetRenderMode(RED::RM_SHADOW_CASTER, 1, iresourceManager->GetState()));
+
         a_outModel.backColor = a_backColor;
         a_outModel.backgroundCubeImage = backgroundCubeImage;
         a_outModel.skyLight = _sky;
+        a_outModel.sunLight = sun;
         a_outModel.imageIsVisible = a_visible;
         a_outModel.imagePath = a_imagePath;
 
@@ -415,7 +431,8 @@ namespace hoops_luminate_bridge {
         //////////////////////////////////////////
 
         RED::ITransformShape* itransformShape = a_transformShape->As<RED::ITransformShape>();
-        RC_TEST(itransformShape->AddChild(a_model.skyLight, RED_SHP_DAG_NO_UPDATE, iresourceManager->GetState()));
+        //RC_TEST(itransformShape->AddChild(a_model.skyLight, RED_SHP_DAG_NO_UPDATE, iresourceManager->GetState()));
+        RC_TEST(itransformShape->AddChild(a_model.sunLight, RED_SHP_DAG_NO_UPDATE, iresourceManager->GetState()));
 
         return RED_OK;
     }

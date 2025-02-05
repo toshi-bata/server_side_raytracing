@@ -48,6 +48,7 @@ namespace hoops_luminate_bridge {
         RED::Object* backgroundCubeImage;
         // Light of the environment, linked to the backgound image.
         RED::Object* skyLight;
+        RED::Object* sunLight;
         // Plain background color if the background image is not visible.
         RED::Color backColor;
         // Whether of not to show the background image.

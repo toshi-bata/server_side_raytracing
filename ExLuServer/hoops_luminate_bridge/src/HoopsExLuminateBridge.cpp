@@ -194,6 +194,12 @@ namespace hoops_luminate_bridge {
             RC_TEST(imesh->BuildTextureCoordinates(RED::MESH_CHANNEL::MCL_TEX0, RED::MTCM_BOX, RED::Matrix::IDENTITY, iresmgr->GetState()));
         }
 
+        // Create the vertex information used for shading tangent-space generation.
+        // The channels mentionned here must match the SetupRealisticMaterial bump channels.
+        // We reserve MCL_TEX0 for 3DF texture coordinates (if any, so use another channel)  
+        RC_TEST(imesh->BuildTextureCoordinates(RED::MCL_TEX7, RED::MTCM_BOX, RED::Matrix::IDENTITY, iresmgr->GetState()));
+        RC_TEST(imesh->BuildTangents(RED::MCL_USER0, RED::MCL_TEX7, iresmgr->GetState()));
+
         RC_TEST(itransform->AddChild(mesh, RED_SHP_DAG_NO_UPDATE, iresmgr->GetState()));
 
         conversionDataNode->floorMesh = mesh;

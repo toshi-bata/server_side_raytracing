@@ -1,8 +1,7 @@
 #pragma once
 #include <string>
 #include <map>
-#include <windows.h>
-#include <hoops_luminate_bridge/HoopsExLuminateBridge.h>
+#include "hoops_luminate_bridge/include/hoops_luminate_bridge/HoopsExLuminateBridge.h"
 #include "ExProcess.h"
 
 using namespace hoops_luminate_bridge;
