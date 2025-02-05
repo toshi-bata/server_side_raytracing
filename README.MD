@@ -3,9 +3,9 @@ This demo runs raytracing rendring in server side using offscreen buffer of HOOP
 
 ## Dependencies
 ### SDKs in use (version)
-* HOOPS Communicator (2024.7.1)
-* HOOPS Exchange (2024.7.0)
-* HOOPS Luminate (2024.7.0)
+* HOOPS Communicator (2025.1.0)
+* HOOPS Exchange (2025.1.0)
+* HOOPS Luminate (2025.1.0)
 
 ### Third paty module
 * libmicrohttpd (1.0.0)<br>
